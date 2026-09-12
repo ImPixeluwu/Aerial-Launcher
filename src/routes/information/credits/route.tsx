@@ -5,6 +5,7 @@ import { ExternalLink } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import packageJson from '../../../../package.json'
+import { upstreamRepositoryURL } from '../../../config/about/links'
 
 import { Route as RootRoute } from '../../__root'
 
@@ -73,14 +74,25 @@ export function ComponentRoute() {
             <ul className="list">
               <li className="item">
                 <a
+                  href={upstreamRepositoryURL}
+                  className="link"
+                  onClick={openURL(upstreamRepositoryURL)}
+                  onAuxClick={whatIsThis()}
+                >
+                  Ciensprog <ExternalLink className="h-3 w-3" />
+                </a>
+                <div>Original developer of Aerial Launcher.</div>
+              </li>
+              <li className="item">
+                <a
                   href={packageJson.repository.url}
                   className="link"
                   onClick={openURL(packageJson.repository.url)}
                   onAuxClick={whatIsThis()}
                 >
-                  Ciensprog <ExternalLink className="h-3 w-3" />
+                  Xpert420 <ExternalLink className="h-3 w-3" />
                 </a>
-                <div>The one and only developer of Aerial Launcher.</div>
+                <div>Maintainer of this community fork.</div>
               </li>
               <li className="item">
                 <a

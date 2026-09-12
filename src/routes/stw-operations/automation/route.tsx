@@ -3,6 +3,7 @@ import { createRoute } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
 
 import { AutomationStatusType } from '../../../config/constants/automation'
+import { stwFeatureAvailability } from '../../../config/constants/feature-availability'
 
 import { HomeBreadcrumb } from '../../../components/navigations/breadcrumb/home'
 import { Combobox } from '../../../components/ui/extended/combobox'
@@ -119,12 +120,20 @@ export function Content() {
               <CardDescription className="bg-[rgb(223_161_42_/_10%)] border-[rgb(223_161_42_/_10%)] border border-l-8 font-bold mb-3 pl-3 py-1 rounded">
                 {t('auto-kick.note')}
               </CardDescription>
-              <CardDescription>
-                {t('auto-kick.description1')}
-              </CardDescription>
-              <CardDescription>
-                {t('auto-kick.description2')}
-              </CardDescription>
+              {stwFeatureAvailability.partyKick ? (
+                <>
+                  <CardDescription>
+                    {t('auto-kick.description1')}
+                  </CardDescription>
+                  <CardDescription>
+                    {t('auto-kick.description2')}
+                  </CardDescription>
+                </>
+              ) : (
+                <CardDescription>
+                  {t('auto-kick.kick-unavailable-description')}
+                </CardDescription>
+              )}
               <CardDescription className="flex gap-2">
                 <StatusItem
                   status={AutomationStatusType.LISTENING}
@@ -287,9 +296,22 @@ export function Content() {
                   </div>
                   <div className="flex flex-col gap-2 px-3 py-2 text-sm">
                     <div className="flex flex-grow items-center justify-between">
-                      <span>{t('auto-kick.options.kick')}</span>
+                      <span
+                        className={cn({
+                          'text-muted-foreground': !stwFeatureAvailability.partyKick,
+                        })}
+                      >
+                        {t('auto-kick.options.kick')}
+                        {!stwFeatureAvailability.partyKick && (
+                          <span className="block text-xs">
+                            {t('general:feature-unavailable')}
+                          </span>
+                        )}
+                      </span>
                       <Switch
-                        checked={current.actions.kick}
+                        checked={
+                          stwFeatureAvailability.partyKick && current.actions.kick
+                        }
                         onCheckedChange={
                           !isLoading
                             ? handleUpdateClaimAction(
@@ -298,7 +320,9 @@ export function Content() {
                               )
                             : undefined
                         }
-                        disabled={disabledActions}
+                        disabled={
+                          !stwFeatureAvailability.partyKick || disabledActions
+                        }
                       />
                     </div>
                     <div className="flex flex-grow items-center justify-between">

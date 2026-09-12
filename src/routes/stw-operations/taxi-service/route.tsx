@@ -23,6 +23,7 @@ import {
 import { Trans, useTranslation } from 'react-i18next'
 
 import { AutomationStatusType } from '../../../config/constants/automation'
+import { stwFeatureAvailability } from '../../../config/constants/feature-availability'
 
 import { HomeBreadcrumb } from '../../../components/navigations/breadcrumb/home'
 import { Combobox } from '../../../components/ui/extended/combobox'
@@ -150,6 +151,11 @@ export function Content() {
             id="selector-card"
           >
             <CardHeader className="border-b">
+              {!stwFeatureAvailability.taxiService && (
+                <p className="text-muted-foreground text-sm" role="status">
+                  {t('general:feature-unavailable')}
+                </p>
+              )}
               <CardDescription className="flex gap-2">
                 <StatusItem
                   status={AutomationStatusType.LISTENING}
@@ -198,7 +204,9 @@ export function Content() {
                     onChange={() => {}}
                     onSelectItem={onSelectItem}
                     emptyContentClassname="py-6 text-center text-sm"
-                    disabled={accountSelectorIsDisabled}
+                    disabled={
+                      !stwFeatureAvailability.taxiService || accountSelectorIsDisabled
+                    }
                     disabledItem={accountSelectorIsDisabled}
                     inputSearchIsDisabled={accountSelectorIsDisabled}
                     hideInputSearchWhenOnlyOneOptionIsAvailable
@@ -217,7 +225,9 @@ export function Content() {
                           accounts.map(({ accountId }) => accountId),
                         )()
                       }}
-                      disabled={accounts.length <= 0}
+                      disabled={
+                        !stwFeatureAvailability.taxiService || accounts.length <= 0
+                      }
                     >
                       {t(
                         'stw-operations:taxi-service.main.actions.restart-all',
@@ -235,7 +245,9 @@ export function Content() {
                           handleRemoveAccount(accountId)()
                         })
                       }}
-                      disabled={accounts.length <= 0}
+                      disabled={
+                        !stwFeatureAvailability.taxiService || accounts.length <= 0
+                      }
                     >
                       {t(
                         'stw-operations:taxi-service.main.actions.remove-all',
@@ -244,7 +256,9 @@ export function Content() {
                   </div>
                   <InputAddAccounts
                     accountIds={accounts.map(({ accountId }) => accountId)}
-                    disabled={accounts.length <= 0}
+                    disabled={
+                      !stwFeatureAvailability.taxiService || accounts.length <= 0
+                    }
                   />
                   <NotificationsSidebar />
                 </div>
@@ -260,6 +274,7 @@ export function Content() {
                 current.status === AutomationStatusType.LOADING ||
                 current.submittings.removing
               const disabledActions =
+                !stwFeatureAvailability.taxiService ||
                 current.submittings.connecting ||
                 current.submittings.removing ||
                 isLoading
@@ -473,7 +488,7 @@ function InputAddAccounts({
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
 
-    if (accountIds.length <= 0) {
+    if (!stwFeatureAvailability.taxiService || accountIds.length <= 0) {
       return
     }
 
@@ -537,6 +552,7 @@ function NotificationsSidebar() {
       <Sheet>
         <SheetTrigger asChild>
           <Button
+            disabled={!stwFeatureAvailability.taxiService}
             className="w-full"
             size="sm"
             variant="outline"

@@ -11,6 +11,7 @@ import type {
 } from '../../types/party'
 
 import { PartyRole } from '../../config/constants/fortnite/party'
+import { stwFeatureAvailability } from '../../config/constants/feature-availability'
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 
 import { MainWindow } from '../startup/windows/main'
@@ -45,6 +46,11 @@ export class Party {
     const kickNotification = config?.useGlobalNotification
       ? ElectronAPIEventKeys.PartyKickActionGlobalNotification
       : ElectronAPIEventKeys.PartyKickActionNotification
+
+    if (!stwFeatureAvailability.partyKick) {
+      MainWindow.instance.webContents.send(kickNotification, 0)
+      return
+    }
 
     try {
       const accessToken =
@@ -230,6 +236,14 @@ export class Party {
     _accounts: AccountDataList,
     claimState: boolean
   ) {
+    if (!stwFeatureAvailability.partyLeave) {
+      MainWindow.instance.webContents.send(
+        ElectronAPIEventKeys.PartyLeaveActionNotification,
+        0
+      )
+      return
+    }
+
     let total = 0
 
     const tmpParties: Record<

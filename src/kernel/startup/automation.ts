@@ -9,6 +9,7 @@ import type {
 import { Collection } from '@discordjs/collection'
 
 import { AutomationStatusType } from '../../config/constants/automation'
+import { stwFeatureAvailability } from '../../config/constants/feature-availability'
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 
 import { AccountService } from '../core/automation/account-service'
@@ -51,6 +52,8 @@ export class Automation {
     const accounts = AccountsManager.getAccounts()
 
     Object.values(automation).forEach((data) => {
+      data.actions.kick =
+        stwFeatureAvailability.partyKick && data.actions.kick
       if (accounts.has(data.accountId)) {
         Automation._accounts.set(data.accountId, {
           ...data,
@@ -103,6 +106,10 @@ export class Automation {
     accountId: string,
     config: AutomationServiceActionConfig,
   ) {
+    if (config.type === 'kick' && !stwFeatureAvailability.partyKick) {
+      return
+    }
+
     Automation.updateAccountData(accountId, {
       actions: {
         [config.type]: config.value,
@@ -595,7 +602,8 @@ export class Automation {
       const actionsNewValueClaim =
         data.actions?.claim ?? automationAccount.actions.claim
       const actionsNewValueKick =
-        data.actions?.kick ?? automationAccount.actions.kick
+        stwFeatureAvailability.partyKick &&
+        (data.actions?.kick ?? automationAccount.actions.kick)
       const actionsNewValueTransferMats =
         data.actions?.transferMats ??
         automationAccount.actions.transferMats

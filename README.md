@@ -1,134 +1,72 @@
-> **NOTE:** Currently in development.
+# Aerial Launcher — Community Fork
 
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Ciensprog/Aerial-Launcher/total?label=All%20Release%20Downloads) ![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/Ciensprog/Aerial-Launcher/latest/total?label=Latest%20Release%20Downloads)
+A Windows launcher for managing Fortnite Save the World accounts, alerts, and rewards.
+This fork is maintained by [Xpert420](https://github.com/FIZZCD) and is based on
+[Ciensprog/Aerial-Launcher](https://github.com/Ciensprog/Aerial-Launcher), originally
+based on Potato Launcher. It is maintained independently of the original developer
+and is not affiliated with Epic Games.
 
-![GitHub License](https://img.shields.io/github/license/Ciensprog/Aerial-Launcher?label=License) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Ciensprog/Aerial-Launcher/release.yml?label=Build) ![GitHub Repo Size](https://img.shields.io/github/repo-size/Ciensprog/Aerial-Launcher?label=Repo%20Size) ![GitHub package.json Version](https://img.shields.io/github/package-json/v/Ciensprog/Aerial-Launcher?label=Current%20Version) ![GitHub last commit](https://img.shields.io/github/last-commit/Ciensprog/Aerial-Launcher?label=Last%20Commit)
+**[Download the latest community release](https://github.com/FIZZCD/Aerial-Launcher/releases/latest)**
+· **[Report an issue](https://github.com/FIZZCD/Aerial-Launcher/issues)**
+· **[Changelog](CHANGELOG.md)**
 
-> [!IMPORTANT]
->
-> - None developer of this application is associated with Epic Games.
-> - **_Since this project is Open-Source, be careful if you download the installer for a version from sources other than this repository, those other sources may have malicious code_**.
+## Version 1.12.4
 
-# Aerial Launcher
+- Alerts use a saved account's user access token, renewing it when needed.
+- Kick, Taxi Service, Kick All Party, Leave Party, and their claim-after-leaving
+  options remain visible but are temporarily disabled.
+- Claim, Transfer mats, and manual Claim Rewards remain available.
+- Update notifications and release links point to this community fork.
 
-A Windows desktop application (based on Potato Launcher) to manage things on Fortnite STW.
+At least one account must be added to load alerts. Other features are inherited
+from the original project; this maintenance release does not claim to fix them all.
 
-<p align="center">
-  <img src="./app-preview.jpg" />
-</p>
+## Install or update
 
-## Development Motivation (Lore)
+1. Download `Aerial Launcher-1.12.4 Setup.exe` from this fork's
+   [Releases page](https://github.com/FIZZCD/Aerial-Launcher/releases).
+2. Close the launcher, then run the installer. The installer is unsigned, so
+   Windows may display a publisher or SmartScreen warning.
+3. Open the launcher and check your accounts and settings.
 
-Most STW players can agree that most of us reach a point where we start using alts to progress even more in the game. Training, doing vbucks on alts, preparing missions... And we end up using discord bots to make our life's easier, leaving missions earlier, and claiming chests on loading screens. The main purpose of the launcher is to have all this features in the same place, storing all the information locally. Have to give some credits to Fresh and Kuda for giving me ideas and their opinion during the development, and then obviously credits to me (Ciensprog) as I'm developing the entirety of Aerial alone.
+Existing settings are stored in `%APPDATA%\aerial-launcher-data`. The community
+fork retains this path and application identity for compatibility. Back up that
+folder before replacing an existing installation. It includes account credentials;
+keep the backup private and never attach it to an issue.
 
-I must clarify that I am a hispanic player and given how large many communities can be, I have realised that there are many projects but few are developed by hispanic players and that's kinda lame.
+Release assets include SHA-256 checksums. To calculate an installer's checksum in
+PowerShell, run `Get-FileHash -Algorithm SHA256 -LiteralPath 'path-to-installer.exe'`.
 
-There are Discord bots that can facilitate many things, for utilities and account administration and that is cool, I was very interested in the idea of creating something similar and sharing with my friends. There was already an open source application (Potato Launcher) to manage STW accounts, but as everyone can agree now, its really outdated. My main idea when I started developing Aerial was to remake a new Potato-Launcher but with all the new implementations that we've had along the years, such as kalp, ca, autokick, hl, bulk operations... And all the premium features that discord bot owners put behind a pay-wall.
+## Build from source
 
-As a Software Developer I felt motivated to develop an Open-Source project that serves the community and the grinders in a daily basis.
+Use Windows, Git, and Node.js 22.22.0:
 
-But what does it mean that this project is Open-Source? It is very simple, to ensure that no one thinks or defames the project as a virus, the hole source of every version of Aerial-Launcher will remain open to the public. Everyone can go and look through the source code and check if there's anything malicious in it.
+```powershell
+git clone https://github.com/FIZZCD/Aerial-Launcher.git
+cd Aerial-Launcher
+npm ci
+npm run lint
+npm start
+```
 
-## Table of Contents
+Run `npm run make` to build the Windows installer. Output is written to
+`out/make/squirrel.windows/x64`. Release maintainers can follow
+[the release guide](docs/RELEASING.md).
 
-- [Aerial Launcher](#aerial-launcher)
-  - [Development Motivation (Lore)](#development-motivation-lore)
-  - [Table of Contents](#table-of-contents)
-  - [Installation](#installation)
-    - [Good To Know](#good-to-know)
-      - [Synchronize existing `accounts.json` from Potato Launcher](#synchronize-existing-accountsjson-from-potato-launcher)
-      - [Update Application](#update-application)
-  - [Features](#features)
-    - [Settings](#settings)
-      - [Epic Games Settings](#epic-games-settings)
-      - [Custom Path](#custom-path)
-      - [Custom Display Name](#custom-display-name)
-    - [Accounts in Launcher](#accounts-in-launcher)
-      - [Add Accounts](#add-accounts)
-      - [Remove Accounts](#remove-accounts)
-      - [Launch Game](#launch-game)
-      - [Generate Exchange Code](#generate-exchange-code)
-      - [STW News Profile](#stw-news-profile)
-  - [🤝 Contributing](#-contributing)
+The repository currently has inherited TypeScript diagnostics. Lint, production
+builds, and targeted runtime checks are used for this maintenance release; a clean
+TypeScript check is not claimed.
 
-## Installation
+## Credits and license
 
-You can download the latest release (Aerial.Launcher-x.x.x.Setup.exe) from [releases](https://github.com/Ciensprog/Aerial-Launcher/releases) page.
+Original development, design credits, and history belong to Ciensprog and the
+original contributors. The [original README](docs/UPSTREAM-README.md) is preserved
+for attribution and historical documentation. Its release and support links refer
+to the upstream project. Existing sponsor links support the original author.
 
-### Good To Know
+This modified version remains under [GPL-3.0](LICENSE). Modification dates and
+release changes are documented in [CHANGELOG.md](CHANGELOG.md). The source matching
+each installer is available from its release tag and GitHub source archives.
 
-Since this application is not code signed, when you try to install you will see a blue (or another color/style) dialog modal to confirm if you want to proceed, it only happens the first time you install.
-
-This folder is being using to save any settings `C:\Users\YOUR_USER\AppData\Roaming\aerial-launcher-data` inside this folder you can find an `accounts.json` file with all your accounts previously added.
-
-#### Synchronize existing `accounts.json` from Potato Launcher
-
-If you are using Potato Launcher you can use your existing `accounts.json` file with Aerial Launcher. You can synchronize doing this:
-
-> Remember replace YOUR_USER text with your user.
-
-1. Copy `accounts.json` file from `C:\Users\YOUR_USER\AppData\Roaming\a.bakedpotato\fnappv2` folder.
-1. Go to `C:\Users\YOUR_USER\AppData\Roaming\aerial-launcher-data` folder and paste `accounts.json` file.
-1. Restart launcher and your accounts should be loaded.
-
-#### Update Application
-
-When a new version is available, you will see a notification in the home section with a link to the project repository release page.
-
-## Features
-
-> Note: new features are still in development.
-
-### Settings
-
-#### Epic Games Settings
-
-From the selected account, you will be redirected to your account settings on the Epic Games website.
-
-#### Custom Path
-
-By default, the directory `C:\Program Files\Epic Games\Fortnite\FortniteGame\Binaries\Win64` is used but it can be changed in settings.
-
-#### Custom Display Name
-
-Sometimes you could need a specific display name for identifying an account. If you want, you can change the current display name with a custom name.
-
-> Note: this only applies visually to the launcher accounts.
-
-### Accounts in Launcher
-
-#### Add Accounts
-
-You can add new accounts using any of these methods:
-
-- Authorization Code.
-- Device Auth.
-- Exchange Code.
-
-#### Remove Accounts
-
-You can remove any account previously added.
-
-#### Launch Game
-
-If you want, you can launch game using "Launch Game" button, this open Fortnite Game using account selected.
-
-#### Generate Exchange Code
-
-Once the accounts have been added, you will be able to generate an Exchange Code for the selected account. From the same place to add account using the Exchange Code method.
-
-#### STW News Profile
-
-You can access the [STW News](https://stw.news/) profile of the selected account.
-
-## 🤝 Contributing
-
-1. [Fork this repository](https://github.com/Ciensprog/Aerial-Launcher/fork).
-1. Clone your fork `git clone https://github.com/YOUR_USERNAME/Aerial-Launcher.git`
-1. Create a new branch `git checkout -b new-feature`. Note: replace _new-feature_ text if you want.
-1. When you are ready, stage changes with `git add .`
-1. Commit your changes `git commit 'my new feature'`
-1. Push your commit `git push origin new-feature`
-1. [Submit a Pull Request](https://github.com/Ciensprog/Aerial-Launcher/pulls).
-
-Alternatively, you can [create an issue](https://github.com/Ciensprog/Aerial-Launcher/issues/new) for reporting any bugs that you find.
+Contributions and bug reports for this fork are welcome in
+[FIZZCD/Aerial-Launcher](https://github.com/FIZZCD/Aerial-Launcher).

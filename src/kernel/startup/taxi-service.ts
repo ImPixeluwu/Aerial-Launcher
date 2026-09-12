@@ -11,6 +11,7 @@ import { Collection } from '@discordjs/collection'
 import { Client } from 'fnbr'
 
 import { AutomationStatusType } from '../../config/constants/automation'
+import { stwFeatureAvailability } from '../../config/constants/feature-availability'
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 
 import { Authentication } from '../core/authentication'
@@ -106,6 +107,15 @@ export class TaxiService {
   private static _reJoinTo: Collection<string, string> = new Collection()
 
   static async load() {
+    if (!stwFeatureAvailability.taxiService) {
+      MainWindow.instance.webContents.send(
+        ElectronAPIEventKeys.TaxiServiceServiceResponseData,
+        {},
+        false,
+      )
+      return
+    }
+
     const { taxiService } = await DataDirectory.getTaxiServiceFile()
     const accounts = AccountsManager.getAccounts()
 
@@ -130,6 +140,8 @@ export class TaxiService {
     origin: Array<string>,
     destination: Array<string>,
   ) {
+    if (!stwFeatureAvailability.taxiService) return
+
     origin.map(async (accountId) => {
       const account = AccountsManager.getAccountById(accountId)
 
@@ -211,6 +223,8 @@ export class TaxiService {
   }
 
   static async addAccount(accountId: string) {
+    if (!stwFeatureAvailability.taxiService) return
+
     const result = await DataDirectory.getTaxiServiceFile()
     const data = {
       accountId,
@@ -287,6 +301,8 @@ export class TaxiService {
   }
 
   static start(data: TaxiServiceAccountFileData) {
+    if (!stwFeatureAvailability.taxiService) return
+
     const setNewStatus = (status: AutomationStatusType) => {
       TaxiService.updateAccountData(data.accountId, {
         status,
@@ -800,6 +816,8 @@ export class TaxiService {
   }
 
   static async reload(ids: Array<string>) {
+    if (!stwFeatureAvailability.taxiService) return
+
     ids.forEach(async (accountId) => {
       const account = TaxiService.getAccountById(accountId)
       const current = TaxiService.getServiceByAccountId(accountId)

@@ -1,6 +1,8 @@
 import { UpdateIcon } from '@radix-ui/react-icons'
 import { useTranslation } from 'react-i18next'
 
+import { stwFeatureAvailability } from '../../../config/constants/feature-availability'
+
 import { Combobox } from '../../../components/ui/extended/combobox'
 import { Button } from '../../../components/ui/button'
 import { Card, CardContent } from '../../../components/ui/card'
@@ -29,18 +31,24 @@ export function LeavePartyCard() {
     useCustomizableMenuSettingsVisibility()
 
   return (
-    <Card className="flex flex-col flex-shrink-0 h-36 justify-center max-w-72 w-full">
+    <Card className="flex flex-col flex-shrink-0 min-h-36 justify-center max-w-72 w-full">
       <CardContent className="block pt-6 space-y-4">
+        {!stwFeatureAvailability.partyLeave && (
+          <p className="text-muted-foreground text-xs" role="status">
+            {t('general:feature-unavailable')}
+          </p>
+        )}
         <div className="flex items-center justify-between">
           <span className="pr-5">{t('party.claim.title')}</span>
           <Switch
             onCheckedChange={changeClaimState}
-            checked={claimState}
-            disabled={!hasValues}
+            checked={stwFeatureAvailability.partyLeave && claimState}
+            disabled={!stwFeatureAvailability.partyLeave || !hasValues}
           />
         </div>
         <div className="flex gap-4">
           <Combobox
+            disabled={!stwFeatureAvailability.partyLeave}
             className="max-w-40"
             placeholder={t('form.accounts.select', {
               ns: 'general',
@@ -65,7 +73,7 @@ export function LeavePartyCard() {
             className="leading-none"
             size="sm"
             onClick={onKick(true)}
-            disabled={!hasValues}
+            disabled={!stwFeatureAvailability.partyLeave || !hasValues}
           >
             <span className={cn('absolute', { hidden: !isPending })}>
               <UpdateIcon className="animate-spin" />

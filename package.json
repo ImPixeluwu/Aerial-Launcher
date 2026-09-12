@@ -1,14 +1,17 @@
 {
   "name": "aerial-launcher",
   "productName": "Aerial Launcher",
-  "description": "A Windows desktop application (based on Potato Launcher) to manage things on Fortnite STW",
-  "version": "1.12.3",
+  "description": "Community fork of Aerial Launcher for Fortnite STW, maintained by Xpert420",
+  "version": "1.12.4",
   "author": {
     "name": "Ciensprog"
   },
+  "contributors": [
+    { "name": "Xpert420", "url": "https://github.com/FIZZCD" }
+  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Ciensprog/Aerial-Launcher"
+    "url": "https://github.com/FIZZCD/Aerial-Launcher"
   },
   "license": "GPL-3.0",
   "keywords": [

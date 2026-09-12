@@ -22,13 +22,12 @@ import { dialog, shell } from 'electron'
 
 import { defaultWorldInfo } from '../../config/constants/fortnite/world-info'
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
-import { defaultFortniteClient } from '../../config/fortnite/clients'
 
 import { MainWindow } from '../startup/windows/main'
 import { DataDirectory } from '../startup/data-directory'
+import { Authentication } from './authentication'
 
 import { getWorldInfoData } from '../../services/endpoints/advanced-mode/world-info'
-import { createAccessTokenUsingClientCredentials } from '../../services/endpoints/oauth'
 
 import { localeCompareForSorting } from '../../lib/utils'
 
@@ -343,16 +342,21 @@ export class WorldInfoManager {
 
   private static async request() {
     try {
-      const accessToken = await createAccessTokenUsingClientCredentials({
-        authorization: defaultFortniteClient.use.auth,
-      })
+      const { accounts } = await DataDirectory.getAccountsFile()
+      const account = accounts[0]
 
-      if (!accessToken.data.access_token) {
+      if (!account) {
+        return defaultWorldInfo
+      }
+
+      const accessToken = await Authentication.verifyAccessToken(account)
+
+      if (!accessToken) {
         return defaultWorldInfo
       }
 
       const worldInfoResponse = await getWorldInfoData({
-        accessToken: accessToken.data.access_token,
+        accessToken,
       })
 
       if (

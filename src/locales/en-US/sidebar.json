@@ -45,6 +45,7 @@
     }
   },
   "links": {
+    "support": "Report an issue",
     "discord": "Discord Server",
     "github": "View on GitHub",
     "credits": "Credits"

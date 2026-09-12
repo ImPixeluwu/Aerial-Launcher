@@ -1,6 +1,8 @@
 import { UpdateIcon } from '@radix-ui/react-icons'
 import { useTranslation } from 'react-i18next'
 
+import { stwFeatureAvailability } from '../../../config/constants/feature-availability'
+
 import { Combobox } from '../../../components/ui/extended/combobox'
 import { Button } from '../../../components/ui/button'
 import { Card, CardContent } from '../../../components/ui/card'
@@ -31,16 +33,22 @@ export function KickAllPartyCard() {
   return (
     <Card className="max-w-lg w-full">
       <CardContent className="grid gap-4 pt-6">
+        {!stwFeatureAvailability.partyKick && (
+          <p className="text-muted-foreground text-xs" role="status">
+            {t('general:feature-unavailable')}
+          </p>
+        )}
         <div className="flex items-center justify-between">
           {t('party.claim.title')}
           <Switch
-            checked={claimState}
+            checked={stwFeatureAvailability.partyKick && claimState}
             onCheckedChange={changeClaimState}
-            disabled={!hasValues}
+            disabled={!stwFeatureAvailability.partyKick || !hasValues}
           />
         </div>
         <div className="flex gap-4">
           <Combobox
+            disabled={!stwFeatureAvailability.partyKick}
             placeholder={t('form.accounts.select', {
               ns: 'general',
             })}
@@ -63,7 +71,7 @@ export function KickAllPartyCard() {
             className="relative"
             size="sm"
             onClick={onKick()}
-            disabled={!hasValues}
+            disabled={!stwFeatureAvailability.partyKick || !hasValues}
           >
             <span className={cn('absolute', { hidden: !isPending })}>
               <UpdateIcon className="animate-spin" />

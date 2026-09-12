@@ -1,9 +1,15 @@
 import packageJson from '../../../package.json'
 
-export const repositoryURL = `https://github.com/${packageJson.author.name}/Aerial-Launcher`
+export const repositoryURL = packageJson.repository.url
 
-export const repositoryReleasesURL = `https://github.com/${packageJson.author.name}/Aerial-Launcher/releases`
+export const repositoryPath = new URL(repositoryURL).pathname.slice(1)
 
-export const supportDiscordServerURL = 'https://discord.gg/QUVFA8GePH'
+export const repositoryReleasesURL = `${repositoryURL}/releases`
 
-export const repositoryAssetsURL = `https://raw.githubusercontent.com/${packageJson.author.name}/Aerial-Launcher/main/assets`
+export const upstreamRepositoryURL = 'https://github.com/Ciensprog/Aerial-Launcher'
+
+export const supportURL = `${repositoryURL}/issues`
+
+export const repositoryRawURL = `https://raw.githubusercontent.com/${repositoryPath}/main`
+
+export const repositoryAssetsURL = `${repositoryRawURL}/assets`
