@@ -32,7 +32,7 @@
   "no-matches": "Ningún objeto coincide con los filtros.",
   "view-details": "Ver detalles",
   "level-short": "Nv {{level}}",
-  "alterations": "Alteraciones",
+  "alterations": "Perks",
   "prop": {
     "category": "Categoría",
     "rarity": "Rareza",
@@ -42,5 +42,20 @@
     "tier": "Tier",
     "material": "Material",
     "template": "ID de plantilla"
+  },
+  "level-of": "NV {{level}} / {{max}}",
+  "base-stats": "Estadísticas base",
+  "base-stats-note": "Valores de la definición del objeto (nivel 1, sin perks). El juego escala el daño, el impacto, la durabilidad y el índice de crítico con el nivel mediante curvas que no están en los datos.",
+  "stat": {
+    "damage": "Daño",
+    "impact": "Impacto",
+    "critChance": "Probabilidad de crítico",
+    "critDamage": "Daño crítico",
+    "attackTime": "Velocidad de ataque",
+    "fireRate": "Cadencia",
+    "fireDelay": "Retardo de disparo",
+    "clipSize": "Cargador",
+    "reloadTime": "Recarga",
+    "durability": "Durabilidad"
   }
 }

@@ -8,9 +8,10 @@ import { Authentication } from './authentication'
 
 import { getQueryProfileInventory } from '../../services/endpoints/mcp'
 
+import { inventoryProfileIds } from '../../config/constants/inventory'
+
 import {
   createEmptyInventoryOverview,
-  inventoryProfileIds,
   parseInventoryProfile,
 } from '../../lib/parsers/inventory'
 

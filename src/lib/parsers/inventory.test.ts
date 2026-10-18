@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { RarityType } from '../../config/constants/resources'
 
 import { parseInventoryProfile } from './inventory'
+import { calculateStwPowerLevel } from './stw-items'
 
 function item(
   templateId: string,
@@ -31,68 +32,81 @@ describe('parseInventoryProfile', () => {
       name: 'Wood',
       quantity: 800,
       stacks: 2,
-      iconKey: 'wooditemdata',
+      powerLevel: null,
     })
+    expect(overview.items[0].imageUrl).toMatch(/T-Icon-Logs\.png$/)
     expect(overview.categoryCounts.materials).toBe(1)
   })
 
-  it('classifies a weapon by type, rarity, tier and material', () => {
+  it('uses the in-game name, power level and perks of a weapon', () => {
     const overview = parse({
-      a: item('Weapon:wid_sniper_boltaction_scope_sr_ore_t05', 1, {
+      a: item('Weapon:wid_edged_sword_medium_laser_sr_crystal_t05', 1, {
         level: 50,
+        alterations: [
+          'Alteration:aid_att_damage_t01',
+          'Alteration:aid_att_critchance_t02',
+          'Alteration:aid_g_melee_affliction_v2',
+        ],
       }),
     })
 
     expect(overview.items[0]).toMatchObject({
       category: 'weapons',
-      filterType: 'sniper',
+      name: 'Sunbeam Stormblade',
+      subType: 'Sword',
+      filterType: 'melee_sword',
       rarity: RarityType.Legendary,
       tier: 5,
-      material: 'ore',
-      level: 50,
-      name: 'Legendary Sniper Boltaction Scope',
-      iconKey: 'voucher_generic_ranged_sr',
-    })
-    expect(overview.rarityCounts[RarityType.Legendary]).toBe(1)
-  })
-
-  it('uses melee vouchers for melee weapons', () => {
-    const overview = parse({
-      a: item('Weapon:wid_edged_sword_heavy_vr_crystal_t04'),
-    })
-
-    expect(overview.items[0]).toMatchObject({
-      filterType: 'melee_sword',
       material: 'crystal',
-      iconKey: 'voucher_generic_melee_vr',
+      level: 50,
+      maxLevel: 50,
+      powerLevel: 130,
+      baseStats: {
+        damage: 162,
+        critChance: 0.15,
+        critDamage: 0.5,
+        attackTime: 0.5185,
+      },
     })
+    expect(overview.items[0].alterations).toEqual([
+      {
+        id: 'aid_att_damage_t01',
+        name: '+10% Damage',
+        tier: 1,
+        rarity: RarityType.Common,
+      },
+      {
+        id: 'aid_att_critchance_t02',
+        name: '+15 Critical Rating',
+        tier: 2,
+        rarity: null,
+      },
+      {
+        id: 'aid_g_melee_affliction_v2',
+        name: '+10% Weapon Damage. Causes Affliction damage for 6 seconds.',
+        tier: null,
+        rarity: RarityType.Common,
+      },
+    ])
   })
 
-  it('names traps from the bundled trap data', () => {
+  it('names traps from the game data', () => {
     const overview = parse({
-      a: item('Trap:tid_floor_spikes_vr_ore_t03', 12),
+      a: item('Trap:tid_floor_spikes_r_t03', 12, { level: 30 }),
     })
 
     expect(overview.items[0]).toMatchObject({
       category: 'traps',
       filterType: 'trap_floor',
-      rarity: RarityType.Epic,
+      rarity: RarityType.Rare,
       tier: 3,
-      name: 'Epic Retractable Floor Spikes',
-      iconKey: 'floor_spikes',
+      name: 'Retractable Floor Spikes',
       quantity: 12,
     })
+    expect(overview.items[0].powerLevel).toBeGreaterThan(0)
   })
 
-  it('prefers the most specific trap key', () => {
-    const overview = parse({
-      a: item('Trap:tid_floor_spikes_wood_c_ore_t01'),
-    })
-
-    expect(overview.items[0].iconKey).toBe('floor_spikes_wood')
-  })
-
-  it('names ingredients from the bundled ingredient data', () => {
+  it('names ingredients from the game data', () => {
     const overview = parse({
       a: item('Ingredient:ingredient_duct_tape', 40),
     })
@@ -100,8 +114,20 @@ describe('parseInventoryProfile', () => {
     expect(overview.items[0]).toMatchObject({
       category: 'ingredients',
       name: 'Duct Tape',
-      rarity: null,
       iconKey: 'duct_tape',
+    })
+  })
+
+  it('falls back to the template id for unknown items', () => {
+    const overview = parse({
+      a: item('Weapon:wid_pistol_auto_ur_ore_t05'),
+    })
+
+    expect(overview.items[0]).toMatchObject({
+      name: 'Mythic Pistol Auto',
+      rarity: RarityType.Mythic,
+      iconKey: 'voucher_generic_ranged_er',
+      imageUrl: null,
     })
   })
 
@@ -122,30 +148,52 @@ describe('parseInventoryProfile', () => {
     expect(overview.items).toHaveLength(2)
   })
 
-  it('treats er and ur as mythic', () => {
-    const overview = parse({
-      a: item('Weapon:wid_assault_auto_er_ore_t05'),
-      b: item('Weapon:wid_pistol_auto_ur_ore_t05'),
-    })
-
-    expect(overview.items.map((entry) => entry.rarity)).toEqual([
-      RarityType.Mythic,
-      RarityType.Mythic,
-    ])
-    expect(overview.items[0].iconKey).toBe('voucher_generic_ranged_er')
-  })
-
-  it('defaults quantity to 1 and keeps alterations', () => {
+  it('defaults quantity to 1', () => {
     const overview = parse({
       a: {
         templateId: 'Weapon:wid_shotgun_standard_r_ore_t02',
-        attributes: { alterations: ['Alteration:aid_att_damage_t02'] },
+        attributes: {},
       } as MCPQueryProfileStorageItem,
     })
 
     expect(overview.items[0]).toMatchObject({
+      name: 'Silver Templar',
       quantity: 1,
-      alterations: ['Alteration:aid_att_damage_t02'],
     })
+  })
+})
+
+describe('calculateStwPowerLevel', () => {
+  it('reads the item rating table', () => {
+    expect(
+      calculateStwPowerLevel({
+        level: 50,
+        rarity: RarityType.Legendary,
+        tier: 5,
+      }),
+    ).toBe(130)
+  })
+
+  it('caps the level at the tier maximum plus bonus levels', () => {
+    const capped = calculateStwPowerLevel({
+      level: 60,
+      rarity: RarityType.Legendary,
+      tier: 5,
+    })
+    const withBonus = calculateStwPowerLevel({
+      level: 60,
+      maxLevelBonus: 10,
+      rarity: RarityType.Legendary,
+      tier: 5,
+    })
+
+    expect(capped).toBe(130)
+    expect(withBonus).toBeGreaterThan(130)
+  })
+
+  it('returns null without rarity, tier or level', () => {
+    expect(
+      calculateStwPowerLevel({ level: null, rarity: null, tier: null }),
+    ).toBeNull()
   })
 })

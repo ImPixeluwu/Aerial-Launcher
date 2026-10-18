@@ -15,27 +15,17 @@ import {
   trapsJson,
 } from '../../config/constants/resources'
 
-export const inventoryProfileIds: Array<InventoryProfileId> = [
-  'theater0',
-  'theater2',
-  'outpost0',
-]
+import {
+  inventoryCategories,
+  inventoryRarityOrder,
+} from '../../config/constants/inventory'
 
-export const inventoryCategories: Array<InventoryCategory> = [
-  'weapons',
-  'traps',
-  'ingredients',
-  'materials',
-]
-
-export const inventoryRarityOrder: Array<RarityType> = [
-  RarityType.Mythic,
-  RarityType.Legendary,
-  RarityType.Epic,
-  RarityType.Rare,
-  RarityType.Uncommon,
-  RarityType.Common,
-]
+import {
+  calculateStwPowerLevel,
+  findStwAlteration,
+  findStwItem,
+  stwMaxLevel,
+} from './stw-items'
 
 const categoryByPrefix: Record<string, InventoryCategory> = {
   weapon: 'weapons',
@@ -272,17 +262,21 @@ export function parseInventoryProfile(
       typeof profileItem.attributes?.level === 'number'
         ? profileItem.attributes.level
         : null
-    const alterations = Array.isArray(profileItem.attributes?.alterations)
+    const alterationIds = Array.isArray(profileItem.attributes?.alterations)
       ? profileItem.attributes.alterations.filter(
           (alteration): alteration is string => typeof alteration === 'string',
         )
       : []
+    const maxLevelBonus =
+      typeof profileItem.attributes?.max_level_bonus === 'number'
+        ? profileItem.attributes.max_level_bonus
+        : 0
     const quantity =
       typeof profileItem.quantity === 'number' ? profileItem.quantity : 1
     const itemKey = [
       profileItem.templateId.toLowerCase(),
       level ?? '',
-      alterations.join(','),
+      alterationIds.join(','),
     ].join('|')
     const current = groups.get(itemKey)
 
@@ -293,24 +287,36 @@ export function parseInventoryProfile(
       return
     }
 
-    const rarity = parseInventoryRarity(id)
-    const filterType = parseInventoryFilterType(category, id)
-    const { iconKey, name } = describeItem(category, id, rarity, filterType)
+    const gameItem = findStwItem(profileItem.templateId)
+    const rarity = gameItem?.rarity ?? parseInventoryRarity(id)
+    const tier = gameItem?.tier ?? parseInventoryTier(id)
+    const filterType =
+      gameItem?.filterType ?? parseInventoryFilterType(category, id)
+    const fallback = describeItem(category, id, rarity, filterType)
+    const hasPowerLevel = category === 'weapons' || category === 'traps'
 
     groups.set(itemKey, {
       itemKey,
       templateId: profileItem.templateId,
-      name,
+      name: gameItem?.name ?? fallback.name,
+      description: gameItem?.description ?? null,
       category,
+      subType: gameItem?.subType ?? null,
       filterType,
       rarity,
-      tier: parseInventoryTier(id),
+      tier,
       material: parseInventoryMaterial(id),
       level,
+      maxLevel: hasPowerLevel && tier ? stwMaxLevel(tier, maxLevelBonus) : null,
+      powerLevel: hasPowerLevel
+        ? calculateStwPowerLevel({ level, maxLevelBonus, rarity, tier })
+        : null,
       quantity,
       stacks: 1,
-      alterations,
-      iconKey,
+      alterations: alterationIds.map(findStwAlteration),
+      baseStats: gameItem?.baseStats ?? null,
+      iconKey: fallback.iconKey,
+      imageUrl: gameItem?.imageUrl ?? null,
     })
   })
 

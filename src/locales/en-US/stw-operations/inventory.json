@@ -32,7 +32,7 @@
   "no-matches": "No items match your filters.",
   "view-details": "View details",
   "level-short": "Lv {{level}}",
-  "alterations": "Alterations",
+  "alterations": "Perks",
   "prop": {
     "category": "Category",
     "rarity": "Rarity",
@@ -42,5 +42,20 @@
     "tier": "Tier",
     "material": "Material",
     "template": "Template ID"
+  },
+  "level-of": "LV {{level}} / {{max}}",
+  "base-stats": "Base stats",
+  "base-stats-note": "Item definition values (level 1, no perks). The game scales damage, impact, durability and critical rating with level using curves not included in the data.",
+  "stat": {
+    "damage": "Damage",
+    "impact": "Impact",
+    "critChance": "Critical Hit Chance",
+    "critDamage": "Critical Hit Damage",
+    "attackTime": "Attack Speed",
+    "fireRate": "Fire Rate",
+    "fireDelay": "Fire Delay",
+    "clipSize": "Magazine Size",
+    "reloadTime": "Reload Time",
+    "durability": "Durability"
   }
 }

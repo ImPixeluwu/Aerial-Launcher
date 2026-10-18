@@ -1,6 +1,6 @@
 # SPEC — Visor de inventario de Salvar el Mundo
 
-Estado: borrador v1 · Alcance: solo lectura (no modifica el perfil del jugador).
+Estado: v2 · Alcance: solo lectura (no modifica el perfil del jugador).
 
 Este documento describe **comportamiento**, no código. Se elaboró observando la
 interfaz del visor de inventario de GLOW Launcher 5.0.4 (análisis estático, sin
@@ -12,6 +12,8 @@ copia código ni datos de GLOW. Cada afirmación lleva su origen:
 - **[INFERIDO]**: deducido; GLOW lo calcula en su lado Rust, que no se pudo
   decompilar.
 - **[DECISIÓN]**: elección propia de esta implementación.
+- **[DATOS]**: comprobado contra los datos del juego de PegLegResources (§6) y,
+  cuando se indica, contra una captura del juego.
 
 ## 1. Qué hace
 
@@ -56,7 +58,7 @@ Asignación por prefijo de `templateId` [INFERIDO]:
 | cualquier otro (p. ej. `Ammo:`) | se ignora |
 
 ### 3.1 Rareza
-Se extrae del `templateId` por el token `_c_`, `_uc_`, `_r_`, `_vr_`, `_sr_`,
+Se toma de los datos del juego (§6) [DATOS]; si el objeto no está, se extrae del `templateId` por el token `_c_`, `_uc_`, `_r_`, `_vr_`, `_sr_`,
 `_ur_`/`_er_` (o el mismo token al final). Orden de los filtros:
 `sr, er, vr, r, uc, c` en GLOW [CONFIRMADO]. Aerial usa `ur` para Mítico; en
 esta implementación `er` y `ur` se muestran ambos como Mítico [DECISIÓN].
@@ -64,7 +66,8 @@ Objetos sin token de rareza no tienen rareza (filtrarlos por rareza los oculta)
 [CONFIRMADO, `getFilteredItems`].
 
 ### 3.2 Tier (estrellas) y material
-- Tier: sufijo `_t01`…`_t05` → 1…5 [INFERIDO; GLOW muestra `starTier`].
+- Tier: campo `Tier` de los datos del juego [DATOS]; si falta, sufijo
+  `_t01`…`_t05` → 1…5 [INFERIDO].
 - Material: `_ore_` (mineral) o `_crystal_` (cristal) [INFERIDO].
 
 ### 3.3 Tipo de arma/trampa (`filterType`)
@@ -73,7 +76,10 @@ Valores que usa GLOW [CONFIRMADO, `WEAPON_TYPE_ICONS` / `TRAP_TYPE_ICONS`]:
 melee_scythe, melee_spear, melee_hammer, melee_bat, trap_floor, trap_wall,
 trap_ceiling`.
 
-Asignación a partir del `templateId` [INFERIDO]:
+Si el objeto existe en los datos del juego (§6), el tipo sale de su `SubType`
+[DATOS]: Assault, Pistol, Shotgun, Sniper, SMG, Explosive, Sword, Axe, Scythe,
+Spear, Hardware → `melee_hammer`, Club → `melee_bat`. Si no, se usa el
+`templateId` [INFERIDO]:
 
 | Patrón (sin prefijo) | filterType |
 |---|---|
@@ -114,50 +120,104 @@ InventoryOverview {
 }
 
 InventoryItem {
-  itemKey: string
-  templateId: string
-  name: string
-  category: 'weapons' | 'traps' | 'ingredients' | 'materials'
-  filterType: string | null
-  rarity: Rarity | null
-  tier: number | null
-  material: 'ore' | 'crystal' | null
-  level: number | null
-  quantity: number
-  stacks: number
-  alterations: string[]   // ids de alteración tal cual vienen del perfil
+  itemKey, templateId
+  name                 // nombre del juego (§6) o derivado del templateId
+  description          // texto del juego o null
+  category, subType, filterType, rarity, tier, material
+  level                // attributes.level
+  maxLevel             // tier × 10 + attributes.max_level_bonus
+  powerLevel           // PL (§6.2); solo armas y trampas
+  quantity, stacks
+  alterations: { id, name, tier, rarity }[]   // perks, en el orden del perfil
+  baseStats            // estadísticas base (§6.3) o null
+  imageUrl             // imagen del juego (§6.1) o null
+  iconKey              // icono de respaldo de Aerial
 }
 ```
 
-Equivale a la forma que consume la interfaz de GLOW [CONFIRMADO], salvo que
-`powerLevel`/`gameLevel`, `icon` y `properties` no se calculan en el proceso
-principal (ver §8 y §6).
+## 6. Datos del juego
 
-## 6. Nombres e iconos (assets)
+Fuente [DECISIÓN del usuario]: **PegLegFN/PegLegResources**
+(<https://github.com/PegLegFN/PegLegResources>, rama `major`), que publica
+datos extraídos de los archivos del juego. Se fija un commit para que nombres,
+imágenes y números sean coherentes entre sí; `src/data/stw/source.json` guarda
+el repositorio, el commit y su fecha.
 
-Regla [DECISIÓN]: **no se toma ningún asset ni texto de GLOW.** Solo se usan
-los recursos que Aerial ya distribuye en `assets/images` y `src/data`.
+Licencia: el repositorio **no tiene archivo de licencia**. Los datos describen
+contenido de Epic Games. Se usa un subconjunto mínimo (nombres, rareza, tier,
+descripción, nombre de imagen, estadísticas base, perks y tabla de PL), y las
+imágenes **no se copian**: se cargan desde `raw.githubusercontent.com`, que la
+CSP de Aerial ya permitía.
 
-| Categoría | Nombre | Icono |
+Generación: `node scripts/generate-stw-data.mjs <copia de PegLegResources>`
+lee `GameAssets/NamedItems/{Weapon,Trap,Ingredient,WorldItem,Alteration}.json`
+y `GameAssets/ItemRatings.json`, y escribe `src/data/stw/`. Para actualizar
+los datos tras un parche, se vuelve a ejecutar con una copia nueva.
+
+Los datos solo se cargan en el proceso principal; el renderer no los incluye.
+
+### 6.1 Nombres e imágenes
+
+- Nombre = `DisplayTier` + `DisplayName` cuando hay `DisplayTier` (p. ej.
+  "Sunbeam" + "Stormblade" = "Sunbeam Stormblade") [DATOS, igual que la captura
+  del juego].
+- Imagen = `ImagePaths.SmallPreview` servida desde el commit fijado. Si no
+  carga, se usa el icono de respaldo de Aerial (vales genéricos, trampas,
+  ingredientes y materiales que ya traía).
+- Si el `templateId` no está en los datos, se usa el método de la v1: nombre
+  derivado del id e icono genérico.
+
+### 6.2 Poder (PL)
+
+[DATOS] Tabla `ItemRatings.Default.Tiers`, clave `{RAREZA}_T0{tier}`
+(`C, UC, R, VR, SR, UR`), con `FirstLevel` y una lista `Ratings`:
+
+```
+nivelEfectivo = min(level, tier × 10 + max_level_bonus)
+PL = floor(Ratings[nivelEfectivo − FirstLevel])
+```
+
+Si el índice es negativo → sin PL; si supera la lista → último valor.
+Comprobado: Legendary T5 a nivel 50 → **130**, como en la captura del juego.
+Solo se calcula para armas y trampas.
+
+### 6.3 Estadísticas
+
+La API de Epic solo devuelve `templateId`, `level`, `max_level_bonus`,
+`alterations` (ids de perks) y `durability`; **no devuelve estadísticas**.
+
+Lo que se puede mostrar [DATOS]:
+
+| Dato | Origen | ¿Exacto como en el juego? |
 |---|---|---|
-| traps | `src/data/traps.json` por clave base (`floor_spikes`…) + rareza | `assets/images/traps/<clave>.png` |
-| ingredients | `src/data/ingredients.json` | `assets/images/ingredients/<clave>.png` |
-| materials | `src/data/resources.json` (`wooditemdata`…) | `assets/images/resources/<clave>.png` |
-| weapons | nombre legible derivado del `templateId` (tipo + variante) | vale genérico `voucher_generic_{melee\|ranged}_{rareza}` |
+| Perks: texto, tier (barras 1–5) y rareza | `Alteration.json` | Sí para el texto de los datos. Las perks de crítico aparecen como "+N Critical Rating"; el juego las muestra como % (ver abajo) |
+| Descripción | `Description` | Sí |
+| Velocidad de ataque (cuerpo a cuerpo) | `SwingTime / SwingPlaySpeed` | Sí: 0,4667 / 0,9 = 0,52 s (captura) |
+| Cadencia, cargador, recarga (a distancia); retardo y recarga (trampas) | `RangedWeaponStats`, `TrapStats` | Sí en valor base, sin perks |
+| Probabilidad y daño crítico base | `BaseCritChance`, `BaseCritDamage` | Sí en valor base (15 % / 50 % en la captura) |
+| Daño, impacto, durabilidad | valores base | **No**: el juego los escala con el nivel |
 
-Si falta un icono se usa el vale genérico de la categoría o `question`.
+Lo que **no** se puede calcular con estos datos (desconocido):
 
-Por qué no hay iconos de cada arma: no existe un repositorio público con
-licencia clara para ese arte; todo es propiedad de Epic, venga de donde venga.
-Opción futura: que el usuario los exporte de su propia instalación del juego
-con FModel. Así son idénticos al juego y no dependen de lo que distribuya GLOW.
+- La curva que escala daño, impacto y durabilidad con el nivel o el PL. En la
+  captura: daño 162 → 1.743,8, impacto 215 → 741,7, durabilidad 100 → 300.
+  Los campos `DmgScale` e `ImpactDmgScale` (0,05) no reproducen esos valores.
+- La conversión de "Critical Rating" a %: en la captura, +10/+15/+20 de rating
+  se muestran como +14/+21/+28 %, es decir ×1,4 a ese nivel; con un solo punto
+  no se puede saber si el factor depende del nivel.
+- Por tanto, tampoco el DPS final.
+
+Por eso la ficha muestra **"Estadísticas base"** con una nota que lo explica.
+Para obtener los valores finales harían falta las tablas de curvas del juego,
+que no están en PegLegResources (se podrían extraer con FModel de una
+instalación propia).
 
 ## 7. Interfaz
 
 - Ruta `/stw-operations/inventory`, con entrada en la barra lateral bajo
   "Operaciones STW" y opción en el menú personalizable [DECISIÓN].
-- Selector de **una** cuenta (por defecto la principal) [DECISIÓN; GLOW usa la
-  cuenta activa].
+- Usa la cuenta activa de Aerial (la de la cabecera); no hay selector propio
+  [DECISIÓN, igual que GLOW].
 - Filtros [CONFIRMADO]:
   - Perfil (radio, 3 opciones). Cambiarlo recarga los datos.
   - Categoría (multi-selección; muestra el contador por categoría).
@@ -166,13 +226,15 @@ con FModel. Así son idénticos al juego y no dependen de lo que distribuya GLOW
     con espera de 200 ms tras teclear.
   - "Limpiar filtros", desactivado si no hay filtros activos.
 - Contador "N objetos mostrados" [CONFIRMADO].
-- Cuadrícula de tarjetas, coloreadas por rareza, con nombre, icono, cantidad
+- Cuadrícula de tarjetas, coloreadas por rareza, con nombre, imagen, PL, cantidad
   abreviada (≥10 000 → `12.3k`, ≥1 000 000 → `1.2M`) y estrellas de tier
   [CONFIRMADO para el formato de cantidad].
-- Al pulsar una tarjeta, ficha de detalle con categoría, rareza, cantidad,
-  stacks, nivel, tier, material, `templateId` y alteraciones [CONFIRMADO para
-  los campos; el nivel sustituye al poder, ver §8]. Escape o clic fuera la
-  cierra [CONFIRMADO].
+- Al pulsar una tarjeta, ficha de detalle al estilo del juego [DECISIÓN]:
+  cabecera con rareza | categoría | subtipo, nombre, PL, estrellas y
+  "NV x / máx"; estadísticas base (§6.3); perks con barras de tier coloreadas
+  (gris, verde, azul, morado, naranja, como en el juego); descripción;
+  cantidad, stacks, material y `templateId`. Escape o clic fuera la cierra
+  [CONFIRMADO].
 - Estados: cargando, error (con el mensaje), vacío ("Ningún objeto coincide")
   [CONFIRMADO].
 - Cambiar de cuenta reinicia los filtros y recarga [CONFIRMADO,
@@ -180,14 +242,10 @@ con FModel. Así son idénticos al juego y no dependen de lo que distribuya GLOW
 
 ## 8. Diferencias con GLOW y lo que no se sabe
 
-- **Poder (PL / "Power level")**: GLOW lo calcula en Rust (`glow-stw/power.rs`)
-  a partir del nivel, el tier y la rareza con tablas del juego que no están
-  disponibles. **Desconocido.** Esta versión muestra el **nivel**
-  (`attributes.level`) y las estrellas de tier.
-- **Nombres localizados de armas y de alteraciones**: GLOW usa un catálogo
-  propio (`item_i18n.rs`). Aquí se usan nombres legibles derivados del
-  `templateId`, solo en inglés. Pendiente.
-- **Iconos individuales de armas**: ver §6.
+- **Estadísticas escaladas**: ver §6.3. GLOW tampoco las muestra en su visor
+  (solo PL y nivel de juego).
+- **Nombres traducidos**: los datos del juego están en inglés; GLOW tiene un
+  catálogo propio traducido. Pendiente.
 - **Regla exacta de agrupación de GLOW**: desconocida; la de §4 es propia.
 
 ## 9. Casos límite
@@ -202,23 +260,30 @@ con FModel. Así son idénticos al juego y no dependen de lo que distribuya GLOW
 
 ## 10. Pruebas de aceptación
 
-1. Un perfil con dos stacks de `WorldItem:wooditemdata` (300 y 500) da un solo
-   objeto de materiales con `quantity = 800` y `stacks = 2`.
-2. `Weapon:wid_sniper_boltaction_scope_sr_ore_t05` → weapons, `sniper`, `sr`,
-   tier 5, `ore`.
-3. `Trap:tid_floor_spikes_vr_ore_t03` → traps, `trap_floor`, `vr`, tier 3,
-   nombre "Epic Retractable Floor Spikes" (según `traps.json`).
-4. `Ingredient:ingredient_duct_tape` → ingredients, nombre "Duct Tape".
-5. `Ammo:ammodatashells` → no aparece.
-6. Filtrar por rareza `sr` oculta los ingredientes sin rareza.
-7. Dos armas con el mismo `templateId` pero distinto `level` → dos objetos.
+1. Dos stacks de `WorldItem:wooditemdata` (300 y 500) → un objeto "Wood" con
+   `quantity = 800` y `stacks = 2`.
+2. `Weapon:wid_edged_sword_medium_laser_sr_crystal_t05` a nivel 50 →
+   "Sunbeam Stormblade", `Sword`, `sr`, tier 5, PL **130**, NV 50/50, velocidad
+   de ataque 0,5185 s, crítico base 15 % y 50 % (captura del juego).
+3. Las perks del perfil se resuelven a su texto y tier
+   (`aid_att_damage_t01` → "+10% Damage", tier 1).
+4. `Trap:tid_floor_spikes_r_t03` → "Retractable Floor Spikes", `trap_floor`,
+   `r`, tier 3, con PL.
+5. `Ingredient:ingredient_duct_tape` → "Duct Tape".
+6. Un `templateId` que no está en los datos → nombre derivado e icono genérico.
+7. `Ammo:ammodatashells` → no aparece.
+8. Dos armas iguales con distinto `level` → dos objetos.
+9. PL: nivel por encima del máximo se limita a `tier × 10`, salvo
+   `max_level_bonus`.
 
-## 11. Implementación en Aerial (v1)
+## 11. Implementación en Aerial
 
 | Pieza | Archivo |
 |---|---|
 | Petición MCP | `src/services/endpoints/mcp.ts` → `getQueryProfileInventory` |
 | Clasificación y agrupación (§3–§4, puro) | `src/lib/parsers/inventory.ts` |
+| Datos del juego y PL (§6) | `src/lib/parsers/stw-items.ts`, `src/data/stw/`, `scripts/generate-stw-data.mjs` |
+| Constantes compartidas con la página | `src/config/constants/inventory.ts` |
 | Pruebas de §10 | `src/lib/parsers/inventory.test.ts` (`npm test`) |
 | Proceso principal | `src/kernel/core/inventory.ts`, `ipcMain.handle('inventory:get-overview')` en `src/kernel/main.ts` |
 | Puente al renderer | `src/kernel/preload-actions/inventory.ts` → `window.electronAPI.getInventoryOverview` |
