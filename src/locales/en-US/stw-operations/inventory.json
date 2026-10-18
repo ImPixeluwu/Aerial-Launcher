@@ -1,6 +1,5 @@
 {
   "no-account": "Select an account to view its inventory.",
-  "account": "Account: {{name}}",
   "reload": "Reload",
   "profile": {
     "theater0": "Campaign backpack",

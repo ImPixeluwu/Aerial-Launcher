@@ -1,6 +1,5 @@
 {
   "no-account": "Selecciona una cuenta para ver su inventario.",
-  "account": "Cuenta: {{name}}",
   "reload": "Recargar",
   "profile": {
     "theater0": "Mochila de Campaña",

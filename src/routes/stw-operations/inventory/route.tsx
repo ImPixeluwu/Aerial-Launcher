@@ -47,7 +47,7 @@ import {
 } from '../../../lib/parsers/inventory'
 import { compactNumber } from '../../../lib/parsers/numbers'
 import { assets } from '../../../lib/repository'
-import { cn, parseCustomDisplayName } from '../../../lib/utils'
+import { cn } from '../../../lib/utils'
 
 export const Route = createRoute({
   getParentRoute: () => RootRoute,
@@ -126,11 +126,6 @@ function Content() {
   return (
     <div className="flex flex-col flex-grow gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-muted-foreground">
-          {t('inventory.account', {
-            name: parseCustomDisplayName(selected),
-          })}
-        </span>
         <Select
           value={profileId}
           onValueChange={(value) => setProfileId(value as typeof profileId)}
