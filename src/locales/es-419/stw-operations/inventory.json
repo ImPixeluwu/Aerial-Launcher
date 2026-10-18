@@ -58,5 +58,6 @@
     "durability": "Durabilidad"
   },
   "no-perks": "Esta arma no tiene perks en los datos de su perfil.",
-  "properties": "Propiedades"
+  "properties": "Propiedades",
+  "close": "Cerrar"
 }

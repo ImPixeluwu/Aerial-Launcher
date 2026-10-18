@@ -26,12 +26,14 @@ import {
 import { Button } from '../../../components/ui/button'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '../../../components/ui/dialog'
 import { Input } from '../../../components/ui/input'
+import { ScrollArea } from '../../../components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -388,7 +390,7 @@ function PerkTierBars({ color, tier }: { color: string; tier: number }) {
       {Array.from({ length: 5 }, (_, index) => (
         <span
           key={index}
-          className="h-[5px] w-4 bg-black/40"
+          className="h-[5px] w-3 bg-black/40"
           style={index < tier ? { backgroundColor: color } : {}}
         />
       ))}
@@ -403,16 +405,16 @@ function PerkRow({ alteration }: { alteration: InventoryAlteration }) {
 
   return (
     <li
-      className="flex min-h-12 items-stretch gap-0.5"
+      className="flex min-h-10 items-stretch gap-0.5"
       title={alteration.id}
     >
       {hasMarker && (
-        <span className="flex w-14 shrink-0 items-center justify-center bg-secondary/80">
+        <span className="flex w-10 shrink-0 items-center justify-center bg-secondary/80">
           {elementIcon ? (
             <img
               src={elementIcon}
               alt={alteration.element ?? ''}
-              className="size-9 object-contain"
+              className="size-7 object-contain"
               draggable={false}
             />
           ) : (
@@ -423,7 +425,7 @@ function PerkRow({ alteration }: { alteration: InventoryAlteration }) {
           )}
         </span>
       )}
-      <span className="flex flex-grow items-center bg-secondary/50 px-3 py-2">
+      <span className="flex flex-grow items-center bg-secondary/50 px-2.5 py-1.5">
         {alteration.name}
       </span>
     </li>
@@ -496,141 +498,155 @@ function ItemDetail({
         }
       }}
     >
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-3xl gap-0 overflow-hidden p-0"
+        hideCloseButton
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
+        <DialogClose
+          className="absolute right-2 top-2 z-10 flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={t('inventory.close')}
+        >
+          <X className="size-6" />
+        </DialogClose>
         {item && (
-          <>
-            <DialogHeader
-              className="rounded-md border-2 p-3"
-              style={rarityStyle(item)}
-            >
-              <div className="flex gap-4">
-                <ItemImage
-                  key={item.itemKey}
-                  item={item}
-                  className="size-24 shrink-0"
-                />
-                <div className="flex min-w-0 flex-col gap-1">
-                  <DialogDescription>
-                    {[
-                      item.rarity ? t(`inventory.rarity.${item.rarity}`) : null,
-                      t(`inventory.category.${item.category}`),
-                      item.subType,
-                    ]
-                      .filter(Boolean)
-                      .join(' | ')}
-                  </DialogDescription>
-                  <DialogTitle className="text-xl">{item.name}</DialogTitle>
-                  <div className="flex flex-wrap items-center gap-3 text-sm">
-                    {item.powerLevel !== null && (
-                      <PowerBadge
-                        powerLevel={item.powerLevel}
-                        className="text-sm"
-                      />
-                    )}
-                    {item.tier !== null && <TierStars tier={item.tier} />}
-                    {item.level !== null && (
-                      <span>
-                        {item.maxLevel !== null
-                          ? t('inventory.level-of', {
-                              level: item.level,
-                              max: item.maxLevel,
-                            })
-                          : t('inventory.level-short', { level: item.level })}
-                      </span>
-                    )}
+          <ScrollArea viewportClassName="max-h-[90vh]">
+            <div className="grid gap-4 p-6 pt-14">
+              <DialogHeader
+                className="rounded-md border-2 p-3"
+                style={rarityStyle(item)}
+              >
+                <div className="flex gap-4">
+                  <ItemImage
+                    key={item.itemKey}
+                    item={item}
+                    className="size-24 shrink-0"
+                  />
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <DialogDescription>
+                      {[
+                        item.rarity
+                          ? t(`inventory.rarity.${item.rarity}`)
+                          : null,
+                        t(`inventory.category.${item.category}`),
+                        item.subType,
+                      ]
+                        .filter(Boolean)
+                        .join(' | ')}
+                    </DialogDescription>
+                    <DialogTitle className="text-xl">{item.name}</DialogTitle>
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      {item.powerLevel !== null && (
+                        <PowerBadge
+                          powerLevel={item.powerLevel}
+                          className="text-sm"
+                        />
+                      )}
+                      {item.tier !== null && <TierStars tier={item.tier} />}
+                      {item.level !== null && (
+                        <span>
+                          {item.maxLevel !== null
+                            ? t('inventory.level-of', {
+                                level: item.level,
+                                max: item.maxLevel,
+                              })
+                            : t('inventory.level-short', { level: item.level })}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </DialogHeader>
+              </DialogHeader>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="flex flex-col gap-4">
-                {stats.length > 0 && (
-                  <section className="text-sm">
-                    <h3 className="mb-2 font-semibold">
-                      {t('inventory.base-stats')}
-                    </h3>
-                    <dl className="divide-y rounded-md border">
-                      {stats.map(([key, value]) => (
-                        <div
-                          key={key}
-                          className="flex justify-between px-3 py-1.5"
-                        >
-                          <dt className="text-muted-foreground">
-                            {t(`inventory.stat.${key}`)}
-                          </dt>
-                          <dd className="font-semibold">
-                            {formatStat(key, value)}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </section>
-                )}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="flex flex-col gap-4">
+                  {stats.length > 0 && (
+                    <section className="text-sm">
+                      <h3 className="mb-2 font-semibold">
+                        {t('inventory.base-stats')}
+                      </h3>
+                      <dl className="divide-y rounded-md border">
+                        {stats.map(([key, value]) => (
+                          <div
+                            key={key}
+                            className="flex justify-between px-3 py-1.5"
+                          >
+                            <dt className="text-muted-foreground">
+                              {t(`inventory.stat.${key}`)}
+                            </dt>
+                            <dd className="font-semibold">
+                              {formatStat(key, value)}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </section>
+                  )}
 
-                <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
-                  {extraRows.map(([label, value]) => (
-                    <div
-                      key={label}
-                      className="contents"
-                    >
-                      <dt className="text-muted-foreground">{label}</dt>
-                      <dd className="break-all">{value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
+                  <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
+                    {extraRows.map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="contents"
+                      >
+                        <dt className="text-muted-foreground">{label}</dt>
+                        <dd className="break-all">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
 
-              <div className="flex flex-col gap-4">
-                {item.alterations.length > 0 ? (
-                  <section className="text-sm">
-                    <h3 className="mb-2 font-semibold">
-                      {t('inventory.alterations')}
-                    </h3>
-                    <ul className="flex flex-col gap-1 overflow-hidden rounded-md">
-                      {item.alterations.map((alteration, index) => (
-                        <PerkRow
-                          key={`${alteration.id}-${index}`}
-                          alteration={alteration}
-                        />
-                      ))}
-                    </ul>
-                  </section>
-                ) : (
-                  item.category === 'weapons' && (
-                    <p className="text-sm text-muted-foreground">
-                      {t('inventory.no-perks')}
+                <div className="flex flex-col gap-4">
+                  {item.alterations.length > 0 ? (
+                    <section className="text-sm">
+                      <h3 className="mb-2 font-semibold">
+                        {t('inventory.alterations')}
+                      </h3>
+                      <ul className="flex flex-col gap-1 overflow-hidden rounded-md">
+                        {item.alterations.map((alteration, index) => (
+                          <PerkRow
+                            key={`${alteration.id}-${index}`}
+                            alteration={alteration}
+                          />
+                        ))}
+                      </ul>
+                    </section>
+                  ) : (
+                    item.category === 'weapons' && (
+                      <p className="text-sm text-muted-foreground">
+                        {t('inventory.no-perks')}
+                      </p>
+                    )
+                  )}
+
+                  {item.description && (
+                    <p className="text-sm italic text-muted-foreground">
+                      {item.description}
                     </p>
-                  )
-                )}
+                  )}
 
-                {item.description && (
-                  <p className="text-sm italic text-muted-foreground">
-                    {item.description}
-                  </p>
-                )}
-
-                {item.properties.length > 0 && (
-                  <details className="text-sm">
-                    <summary className="cursor-pointer font-semibold">
-                      {t('inventory.properties')}
-                    </summary>
-                    <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-xs">
-                      {item.properties.map(({ key, value }) => (
-                        <div
-                          key={key}
-                          className="contents"
-                        >
-                          <dt className="text-muted-foreground">{key}</dt>
-                          <dd className="break-all font-mono">{value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </details>
-                )}
+                  {item.properties.length > 0 && (
+                    <details className="text-sm">
+                      <summary className="cursor-pointer font-semibold">
+                        {t('inventory.properties')}
+                      </summary>
+                      <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-xs">
+                        {item.properties.map(({ key, value }) => (
+                          <div
+                            key={key}
+                            className="contents"
+                          >
+                            <dt className="text-muted-foreground">{key}</dt>
+                            <dd className="break-all font-mono">{value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </details>
+                  )}
+                </div>
               </div>
             </div>
-          </>
+          </ScrollArea>
         )}
       </DialogContent>
     </Dialog>

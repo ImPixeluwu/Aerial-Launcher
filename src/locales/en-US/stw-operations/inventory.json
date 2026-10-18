@@ -58,5 +58,6 @@
     "durability": "Durability"
   },
   "no-perks": "This weapon has no perks in its profile data.",
-  "properties": "Properties"
+  "properties": "Properties",
+  "close": "Close"
 }
