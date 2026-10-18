@@ -1,5 +1,6 @@
 import type {
   InventoryAlteration,
+  InventoryElement,
   InventoryFilterType,
   InventoryItemBaseStats,
 } from '../../types/inventory'
@@ -42,6 +43,23 @@ const alterations = alterationsJson as Record<string, StwAlterationRecord>
 const itemRatings = itemRatingsJson as Record<string, StwRatingTier>
 
 const rarityCodes = new Set<string>(Object.values(RarityType))
+
+// Perk tiers map to the in-game colors: grey, green, blue, purple, gold
+const perkTierRarities = [
+  RarityType.Common,
+  RarityType.Uncommon,
+  RarityType.Rare,
+  RarityType.Epic,
+  RarityType.Legendary,
+]
+
+const elements: Array<InventoryElement> = [
+  'Energy',
+  'Fire',
+  'Nature',
+  'Physical',
+  'Water',
+]
 
 const filterTypeBySubType: Record<string, InventoryFilterType> = {
   assault: 'assault',
@@ -92,12 +110,22 @@ export function findStwAlteration(alterationId: string): InventoryAlteration {
   const id = alterationId.replace(/^alteration:/i, '')
   const record = alterations[`alteration:${id.toLowerCase()}`]
   const tierMatch = id.match(/_t0?([1-9])$/i)
+  const tier = tierMatch ? Math.min(Number(tierMatch[1]), 5) : null
+  const name = record?.n ?? id
+  const elementName = name.match(/^Element: (\w+)/)?.[1]
 
   return {
     id,
-    name: record?.n ?? id,
-    tier: tierMatch ? Number(tierMatch[1]) : null,
-    rarity: toRarity(record?.r),
+    name,
+    tier,
+    rarity: tier ? perkTierRarities[tier - 1] : toRarity(record?.r),
+    element:
+      elements.find((element) => element === elementName) ??
+      (/_ele_|_ele$/i.test(id)
+        ? elements.find((element) =>
+            id.toLowerCase().includes(element.toLowerCase()),
+          ) ?? null
+        : null),
   }
 }
 

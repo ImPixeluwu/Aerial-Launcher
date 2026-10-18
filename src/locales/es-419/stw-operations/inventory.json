@@ -45,7 +45,6 @@
   },
   "level-of": "NV {{level}} / {{max}}",
   "base-stats": "Estadísticas base",
-  "base-stats-note": "Valores de la definición del objeto (nivel 1, sin perks). El juego escala el daño, el impacto, la durabilidad y el índice de crítico con el nivel mediante curvas que no están en los datos.",
   "stat": {
     "damage": "Daño",
     "impact": "Impacto",
@@ -57,5 +56,7 @@
     "clipSize": "Cargador",
     "reloadTime": "Recarga",
     "durability": "Durabilidad"
-  }
+  },
+  "no-perks": "Esta arma no tiene perks en los datos de su perfil.",
+  "properties": "Propiedades"
 }

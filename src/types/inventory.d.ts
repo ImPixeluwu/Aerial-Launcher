@@ -41,11 +41,19 @@ export type InventoryItemBaseStats = Partial<{
   durability: number
 }>
 
+export type InventoryElement =
+  | 'Energy'
+  | 'Fire'
+  | 'Nature'
+  | 'Physical'
+  | 'Water'
+
 export type InventoryAlteration = {
   id: string
   name: string
   tier: number | null
   rarity: RarityType | null
+  element: InventoryElement | null
 }
 
 export type InventoryItem = {
@@ -66,6 +74,7 @@ export type InventoryItem = {
   stacks: number
   alterations: Array<InventoryAlteration>
   baseStats: InventoryItemBaseStats | null
+  properties: Array<{ key: string; value: string }>
   iconKey: string
   imageUrl: string | null
 }

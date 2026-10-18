@@ -57,6 +57,11 @@ Asignación por prefijo de `templateId` [INFERIDO]:
 | `WorldItem:` | materials |
 | cualquier otro (p. ej. `Ammo:`) | se ignora |
 
+Objetos ocultos siempre [DECISIÓN del usuario]: `Weapon:buildingitemdata_floor`,
+`Weapon:buildingitemdata_roofs`, `Weapon:buildingitemdata_stair_w`,
+`Weapon:buildingitemdata_wall` y `Weapon:edittool` (piezas de construcción y
+herramienta de edición). Lista en `src/config/constants/inventory.ts`.
+
 ### 3.1 Rareza
 Se toma de los datos del juego (§6) [DATOS]; si el objeto no está, se extrae del `templateId` por el token `_c_`, `_uc_`, `_r_`, `_vr_`, `_sr_`,
 `_ur_`/`_er_` (o el mismo token al final). Orden de los filtros:
@@ -128,7 +133,8 @@ InventoryItem {
   maxLevel             // tier × 10 + attributes.max_level_bonus
   powerLevel           // PL (§6.2); solo armas y trampas
   quantity, stacks
-  alterations: { id, name, tier, rarity }[]   // perks, en el orden del perfil
+  alterations: { id, name, tier, rarity, element }[]   // perks, en orden
+  properties: { key, value }[]   // atributos del perfil en bruto
   baseStats            // estadísticas base (§6.3) o null
   imageUrl             // imagen del juego (§6.1) o null
   iconKey              // icono de respaldo de Aerial
@@ -207,7 +213,22 @@ Lo que **no** se puede calcular con estos datos (desconocido):
   no se puede saber si el factor depende del nivel.
 - Por tanto, tampoco el DPS final.
 
-Por eso la ficha muestra **"Estadísticas base"** con una nota que lo explica.
+Por eso la ficha muestra **"Estadísticas base"**.
+
+### 6.4 Perks
+
+- Ids: `attributes.alterations`; si no trae ninguno, `attributes.alterationDefinitions`
+  [INFERIDO: el tipo previo de Aerial nombraba ese campo].
+- Texto: `DisplayName` de `Alteration.json`.
+- Tier = sufijo `_t01`…`_t05`. Rareza y color según el tier, como en el juego:
+  t01 gris, t02 verde, t03 azul, t04 morado, t05 dorado [DATOS, captura del
+  juego]. Las perks sin tier usan la rareza de los datos.
+- Presentación como en el juego: un bloque con cinco barras apiladas,
+  rellenas desde abajo hasta el tier y del color de la rareza; las perks de
+  elemento ("Element: X…") muestran el icono del elemento de Aerial; las perks
+  de juego sin tier ocupan la fila entera sin marcador.
+- Si un arma no trae perks se indica en la ficha, y la sección
+  "Propiedades" muestra los atributos en bruto del perfil para diagnosticarlo.
 Para obtener los valores finales harían falta las tablas de curvas del juego,
 que no están en PegLegResources (se podrían extraer con FModel de una
 instalación propia).
@@ -231,9 +252,9 @@ instalación propia).
   [CONFIRMADO para el formato de cantidad].
 - Al pulsar una tarjeta, ficha de detalle al estilo del juego [DECISIÓN]:
   cabecera con rareza | categoría | subtipo, nombre, PL, estrellas y
-  "NV x / máx"; estadísticas base (§6.3); perks con barras de tier coloreadas
-  (gris, verde, azul, morado, naranja, como en el juego); descripción;
-  cantidad, stacks, material y `templateId`. Escape o clic fuera la cierra
+  "NV x / máx"; estadísticas base (§6.3); perks (§6.4); descripción;
+  cantidad, stacks, material, `templateId` y propiedades en bruto
+  (plegadas). Escape o clic fuera la cierra
   [CONFIRMADO].
 - Estados: cargando, error (con el mensaje), vacío ("Ningún objeto coincide")
   [CONFIRMADO].
@@ -275,6 +296,10 @@ instalación propia).
 8. Dos armas iguales con distinto `level` → dos objetos.
 9. PL: nivel por encima del máximo se limita a `tier × 10`, salvo
    `max_level_bonus`.
+10. Perks: `aid_att_critchance_t05` → tier 5, dorado; `aid_ele_energy_t03` →
+    tier 3, azul, elemento Energía.
+11. Perks en `alterationDefinitions` se leen si falta `alterations`.
+12. Las cinco plantillas ocultas no aparecen.
 
 ## 11. Implementación en Aerial
 

@@ -6,7 +6,7 @@ export type MCPQueryProfileStorageItem = {
     level: number
     max_level_bonus: number
     alterations: Array<string>
-    alterationDefinitions: Array<number>
+    alterationDefinitions: Array<number | string>
     durability: number
     itemSource: string
   }>

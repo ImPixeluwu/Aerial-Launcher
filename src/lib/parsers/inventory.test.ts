@@ -74,20 +74,80 @@ describe('parseInventoryProfile', () => {
         name: '+10% Damage',
         tier: 1,
         rarity: RarityType.Common,
+        element: null,
       },
       {
         id: 'aid_att_critchance_t02',
         name: '+15 Critical Rating',
         tier: 2,
-        rarity: null,
+        rarity: RarityType.Uncommon,
+        element: null,
       },
       {
         id: 'aid_g_melee_affliction_v2',
         name: '+10% Weapon Damage. Causes Affliction damage for 6 seconds.',
         tier: null,
         rarity: RarityType.Common,
+        element: null,
       },
     ])
+  })
+
+  it('colors perks by tier and detects elements', () => {
+    const overview = parse({
+      a: item('Weapon:wid_edged_sword_medium_laser_sr_crystal_t05', 1, {
+        level: 50,
+        alterations: [
+          'Alteration:aid_att_critchance_t05',
+          'Alteration:aid_ele_energy_t03',
+        ],
+      }),
+    })
+
+    expect(overview.items[0].alterations).toMatchObject([
+      { tier: 5, rarity: RarityType.Legendary, element: null },
+      { tier: 3, rarity: RarityType.Rare, element: 'Energy' },
+    ])
+  })
+
+  it('reads perks from alterationDefinitions when alterations is missing', () => {
+    const overview = parse({
+      a: item('Weapon:wid_assault_auto_sr_ore_t05', 1, {
+        level: 50,
+        alterationDefinitions: ['Alteration:aid_att_damage_t04'],
+      }),
+    })
+
+    expect(overview.items[0].alterations.map((perk) => perk.id)).toEqual([
+      'aid_att_damage_t04',
+    ])
+  })
+
+  it('exposes the raw profile attributes', () => {
+    const overview = parse({
+      a: item('Weapon:wid_assault_auto_sr_ore_t05', 1, {
+        level: 50,
+        durability: 1,
+        itemSource: '',
+      }),
+    })
+
+    expect(overview.items[0].properties).toEqual([
+      { key: 'durability', value: '1' },
+      { key: 'itemSource', value: '' },
+    ])
+  })
+
+  it('hides building pieces and the edit tool', () => {
+    const overview = parse({
+      a: item('Weapon:buildingitemdata_floor'),
+      b: item('Weapon:buildingitemdata_roofs'),
+      c: item('Weapon:buildingitemdata_stair_w'),
+      d: item('Weapon:buildingitemdata_wall'),
+      e: item('Weapon:edittool'),
+    })
+
+    expect(overview.items).toHaveLength(0)
   })
 
   it('names traps from the game data', () => {

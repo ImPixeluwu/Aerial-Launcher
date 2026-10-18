@@ -26,3 +26,15 @@ export const inventoryRarityOrder: Array<RarityType> = [
   RarityType.Uncommon,
   RarityType.Common,
 ]
+
+/**
+ * Building pieces and the edit tool live in the backpack but are not
+ * inventory items for the player.
+ */
+export const inventoryHiddenTemplateIds = new Set([
+  'weapon:buildingitemdata_floor',
+  'weapon:buildingitemdata_roofs',
+  'weapon:buildingitemdata_stair_w',
+  'weapon:buildingitemdata_wall',
+  'weapon:edittool',
+])

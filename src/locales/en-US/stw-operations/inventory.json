@@ -45,7 +45,6 @@
   },
   "level-of": "LV {{level}} / {{max}}",
   "base-stats": "Base stats",
-  "base-stats-note": "Item definition values (level 1, no perks). The game scales damage, impact, durability and critical rating with level using curves not included in the data.",
   "stat": {
     "damage": "Damage",
     "impact": "Impact",
@@ -57,5 +56,7 @@
     "clipSize": "Magazine Size",
     "reloadTime": "Reload Time",
     "durability": "Durability"
-  }
+  },
+  "no-perks": "This weapon has no perks in its profile data.",
+  "properties": "Properties"
 }

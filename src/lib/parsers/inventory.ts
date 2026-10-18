@@ -17,6 +17,7 @@ import {
 
 import {
   inventoryCategories,
+  inventoryHiddenTemplateIds,
   inventoryRarityOrder,
 } from '../../config/constants/inventory'
 
@@ -223,6 +224,43 @@ function describeItem(
   }
 }
 
+/**
+ * Perk ids usually come in attributes.alterations; some profiles use
+ * attributes.alterationDefinitions instead.
+ */
+function readAlterationIds(
+  attributes: MCPQueryProfileStorageItem['attributes'] | undefined,
+) {
+  const source = [attributes?.alterations, attributes?.alterationDefinitions]
+    .filter(Array.isArray)
+    .find((list: Array<unknown>) =>
+      list.some((value) => typeof value === 'string' && value.length > 0),
+    ) as Array<unknown> | undefined
+
+  return (source ?? []).filter(
+    (value): value is string => typeof value === 'string' && value.length > 0,
+  )
+}
+
+const hiddenPropertyKeys = new Set(['level', 'max_level_bonus'])
+
+/**
+ * Raw profile attributes, shown as-is in the detail dialog.
+ */
+function readProperties(
+  attributes: MCPQueryProfileStorageItem['attributes'] | undefined,
+) {
+  return Object.entries(attributes ?? {})
+    .filter(([key]) => !hiddenPropertyKeys.has(key))
+    .map(([key, value]) => ({
+      key,
+      value: typeof value === 'string' ? value : JSON.stringify(value),
+    }))
+    .toSorted((propertyA, propertyB) =>
+      propertyA.key.localeCompare(propertyB.key),
+    )
+}
+
 export function createEmptyInventoryOverview(
   profileId: InventoryProfileId,
 ): InventoryOverview {
@@ -248,7 +286,10 @@ export function parseInventoryProfile(
   const groups = new Map<string, InventoryItem>()
 
   Object.values(profileItems).forEach((profileItem) => {
-    if (typeof profileItem?.templateId !== 'string') {
+    if (
+      typeof profileItem?.templateId !== 'string' ||
+      inventoryHiddenTemplateIds.has(profileItem.templateId.toLowerCase())
+    ) {
       return
     }
 
@@ -262,11 +303,7 @@ export function parseInventoryProfile(
       typeof profileItem.attributes?.level === 'number'
         ? profileItem.attributes.level
         : null
-    const alterationIds = Array.isArray(profileItem.attributes?.alterations)
-      ? profileItem.attributes.alterations.filter(
-          (alteration): alteration is string => typeof alteration === 'string',
-        )
-      : []
+    const alterationIds = readAlterationIds(profileItem.attributes)
     const maxLevelBonus =
       typeof profileItem.attributes?.max_level_bonus === 'number'
         ? profileItem.attributes.max_level_bonus
@@ -315,6 +352,7 @@ export function parseInventoryProfile(
       stacks: 1,
       alterations: alterationIds.map(findStwAlteration),
       baseStats: gameItem?.baseStats ?? null,
+      properties: readProperties(profileItem.attributes),
       iconKey: fallback.iconKey,
       imageUrl: gameItem?.imageUrl ?? null,
     })

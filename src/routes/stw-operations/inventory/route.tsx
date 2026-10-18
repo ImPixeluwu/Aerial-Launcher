@@ -1,4 +1,5 @@
 import type {
+  InventoryAlteration,
   InventoryItem,
   InventoryItemBaseStats,
 } from '../../../types/inventory'
@@ -266,14 +267,15 @@ function Content() {
   )
 }
 
-// Perk tier colors follow the in-game bars: grey, green, blue, purple, orange
-const perkTierRarities = [
-  RarityType.Common,
-  RarityType.Uncommon,
-  RarityType.Rare,
-  RarityType.Epic,
-  RarityType.Legendary,
-]
+// Perk colors as shown in game: grey, green, blue, purple, gold
+const perkColors: Record<RarityType, string> = {
+  [RarityType.Common]: '#c4c4c4',
+  [RarityType.Uncommon]: '#5fc314',
+  [RarityType.Rare]: '#2fa3f5',
+  [RarityType.Epic]: '#b45cf0',
+  [RarityType.Legendary]: '#f5c242',
+  [RarityType.Mythic]: '#f5c242',
+}
 
 function rarityStyle(item: InventoryItem) {
   const color = raritiesColor[item.rarity ?? RarityType.Common]
@@ -380,23 +382,51 @@ function TierStars({ tier }: { tier: number }) {
   )
 }
 
-function PerkTierBars({ tier }: { tier: number | null }) {
-  const color = tier
-    ? raritiesColor[perkTierRarities[Math.min(tier, 5) - 1]]
-    : undefined
-
+function PerkTierBars({ color, tier }: { color: string; tier: number }) {
   return (
-    <span className="flex flex-col-reverse gap-0.5">
+    <span className="flex flex-col-reverse gap-[3px]">
       {Array.from({ length: 5 }, (_, index) => (
         <span
           key={index}
-          className="h-1 w-3 bg-muted"
-          style={
-            tier !== null && index < tier ? { backgroundColor: color } : {}
-          }
+          className="h-[5px] w-4 bg-black/40"
+          style={index < tier ? { backgroundColor: color } : {}}
         />
       ))}
     </span>
+  )
+}
+
+function PerkRow({ alteration }: { alteration: InventoryAlteration }) {
+  const color = alteration.rarity ? perkColors[alteration.rarity] : undefined
+  const elementIcon = alteration.element ? assets(alteration.element) : null
+  const hasMarker = alteration.tier !== null || elementIcon
+
+  return (
+    <li
+      className="flex min-h-12 items-stretch gap-0.5"
+      title={alteration.id}
+    >
+      {hasMarker && (
+        <span className="flex w-14 shrink-0 items-center justify-center bg-secondary/80">
+          {elementIcon ? (
+            <img
+              src={elementIcon}
+              alt={alteration.element ?? ''}
+              className="size-9 object-contain"
+              draggable={false}
+            />
+          ) : (
+            <PerkTierBars
+              color={color ?? perkColors[RarityType.Common]}
+              tier={alteration.tier ?? 0}
+            />
+          )}
+        </span>
+      )}
+      <span className="flex flex-grow items-center bg-secondary/50 px-3 py-2">
+        {alteration.name}
+      </span>
+    </li>
   )
 }
 
@@ -517,12 +547,9 @@ function ItemDetail({
               <div className="flex flex-col gap-4">
                 {stats.length > 0 && (
                   <section className="text-sm">
-                    <h3 className="font-semibold">
+                    <h3 className="mb-2 font-semibold">
                       {t('inventory.base-stats')}
                     </h3>
-                    <p className="mb-2 text-xs text-muted-foreground">
-                      {t('inventory.base-stats-note')}
-                    </p>
                     <dl className="divide-y rounded-md border">
                       {stats.map(([key, value]) => (
                         <div
@@ -555,30 +582,51 @@ function ItemDetail({
               </div>
 
               <div className="flex flex-col gap-4">
-                {item.alterations.length > 0 && (
+                {item.alterations.length > 0 ? (
                   <section className="text-sm">
                     <h3 className="mb-2 font-semibold">
                       {t('inventory.alterations')}
                     </h3>
-                    <ul className="divide-y rounded-md border">
+                    <ul className="flex flex-col gap-1 overflow-hidden rounded-md">
                       {item.alterations.map((alteration, index) => (
-                        <li
+                        <PerkRow
                           key={`${alteration.id}-${index}`}
-                          className="flex items-center gap-3 px-3 py-2"
-                          title={alteration.id}
-                        >
-                          <PerkTierBars tier={alteration.tier} />
-                          <span>{alteration.name}</span>
-                        </li>
+                          alteration={alteration}
+                        />
                       ))}
                     </ul>
                   </section>
+                ) : (
+                  item.category === 'weapons' && (
+                    <p className="text-sm text-muted-foreground">
+                      {t('inventory.no-perks')}
+                    </p>
+                  )
                 )}
 
                 {item.description && (
                   <p className="text-sm italic text-muted-foreground">
                     {item.description}
                   </p>
+                )}
+
+                {item.properties.length > 0 && (
+                  <details className="text-sm">
+                    <summary className="cursor-pointer font-semibold">
+                      {t('inventory.properties')}
+                    </summary>
+                    <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-xs">
+                      {item.properties.map(({ key, value }) => (
+                        <div
+                          key={key}
+                          className="contents"
+                        >
+                          <dt className="text-muted-foreground">{key}</dt>
+                          <dd className="break-all font-mono">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </details>
                 )}
               </div>
             </div>
