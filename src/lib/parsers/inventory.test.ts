@@ -110,6 +110,33 @@ describe('parseInventoryProfile', () => {
     ])
   })
 
+  it('translates legacy perk ids like the game does', () => {
+    const overview = parse({
+      a: item('Weapon:wid_assault_auto_sr_ore_t05', 1, {
+        level: 50,
+        alterations: [
+          'Alteration:aid_att_ranged_damage',
+          'Alteration:aid_att_ranged_damage_alt1',
+          'Alteration:aid_att_ranged_critdamage_alt2',
+          'Alteration:aid_g_ranged_energyaffliction',
+          'Alteration:aid_att_ranged_unknownstat_alt3',
+        ],
+      }),
+    })
+
+    expect(overview.items[0].alterations).toMatchObject([
+      { name: '+10% Damage', tier: 1, rarity: RarityType.Common },
+      { name: '+15% Damage', tier: 2, rarity: RarityType.Uncommon },
+      { name: '+90% Crit Damage', tier: 3, rarity: RarityType.Rare },
+      {
+        name: 'Element: Energy and 10% Weapon Damage. Causes Affliction damage for 6 seconds.',
+        tier: null,
+        element: 'Energy',
+      },
+      { name: 'Ranged unknownstat', tier: 4, rarity: RarityType.Epic },
+    ])
+  })
+
   it('reads perks from alterationDefinitions when alterations is missing', () => {
     const overview = parse({
       a: item('Weapon:wid_assault_auto_sr_ore_t05', 1, {

@@ -205,8 +205,15 @@ Lo que se puede mostrar [DATOS]:
 
 Lo que **no** se puede calcular con estos datos (desconocido):
 
-- La curva que escala daño, impacto y durabilidad con el nivel o el PL. En la
-  captura: daño 162 → 1.743,8, impacto 215 → 741,7, durabilidad 100 → 300.
+- La curva que escala daño, impacto, durabilidad y cadencia con el nivel o el
+  PL. Capturas del juego (Legendary T5, NV 50, PL 130): Sunbeam Stormblade,
+  daño 162 → 1.743,8, impacto 215 → 741,7, durabilidad 100 → 300; Brightcore
+  Vacuum Tube Launcher, daño 333 → 92.453,7, impacto 2.813 → 9.704,9,
+  durabilidad 50 → 150, cadencia 1,00 → 2,33. Impacto (×3,45) y durabilidad
+  (×3) coinciden entre las dos armas a ese nivel, pero no hay datos de otros
+  niveles; el daño y la cadencia dependen además del arma.
+- La API de Epic no devuelve estadísticas finales: el juego las calcula en el
+  cliente a partir de sus tablas.
   Los campos `DmgScale` e `ImpactDmgScale` (0,05) no reproducen esos valores.
 - La conversión de "Critical Rating" a %: en la captura, +10/+15/+20 de rating
   se muestran como +14/+21/+28 %, es decir ×1,4 a ese nivel; con un solo punto
@@ -227,6 +234,18 @@ Por eso la ficha muestra **"Estadísticas base"**.
   rellenas desde abajo hasta el tier y del color de la rareza; las perks de
   elemento ("Element: X…") muestran el icono del elemento de Aerial; las perks
   de juego sin tier ocupan la fila entera sin marcador.
+- Perks legacy [INFERIDO, comprobado con una captura del juego]: las armas
+  antiguas guardan ids del sistema de perks anterior, que ya no están en los
+  datos del juego (`aid_att_ranged_damage`, `aid_att_ranged_damage_alt1`,
+  `aid_att_ranged_critdamage_alt2`…). Regla: sin sufijo = tier 1, `_altN` =
+  tier N + 1, con el texto de la perk actual `aid_att_<stat>_t0<tier>` (o
+  `aid_att_<stat>_<ranged|melee|trap>_t0<tier>`). En el juego, `damage`,
+  `damage_alt1` y `critdamage_alt2` se muestran como +10 % Damage, +15 % Damage
+  y +90 % Crit Damage, igual que `aid_att_damage_t01`, `_t02` y
+  `aid_att_critdamage_t03`. `aid_g_<ranged|melee>_<elemento>affliction` se
+  muestra como "Element: <Elemento> and 10% Weapon Damage. Causes Affliction
+  damage for 6 seconds." con el icono del elemento. Un id legacy sin
+  equivalente se muestra con un nombre legible derivado del id.
 - Si un arma no trae perks se indica en la ficha, y la sección
   "Propiedades" muestra los atributos en bruto del perfil para diagnosticarlo.
 Para obtener los valores finales harían falta las tablas de curvas del juego,

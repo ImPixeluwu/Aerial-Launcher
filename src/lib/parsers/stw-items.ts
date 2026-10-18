@@ -106,12 +106,80 @@ export function findStwItem(templateId: string) {
   }
 }
 
+function findAlterationRecord(id: string) {
+  return alterations[`alteration:${id.toLowerCase()}`]
+}
+
+function humanizeAlterationId(id: string) {
+  const words = id
+    .toLowerCase()
+    .replace(/^aid_(?:att_|g_|conditional_)?/, '')
+    .replace(/_alt\d$/, '')
+    .split('_')
+    .filter(Boolean)
+  const text = words.join(' ')
+
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+/**
+ * Legacy weapons keep perk ids from the old perk system, which are no
+ * longer in the game data: "aid_att_ranged_damage", "..._alt1", ...
+ * The base id is tier 1 and "_altN" is tier N + 1, with the same values
+ * as the current "aid_att_<stat>_t0X" perks (checked in game: damage,
+ * damage_alt1 and critdamage_alt2 show +10%, +15% and +90%).
+ */
+function resolveLegacyAlteration(id: string) {
+  const elementAffliction = id.match(
+    /^aid_g_(?:ranged|melee)_(energy|fire|nature|physical|water)affliction$/i,
+  )
+
+  if (elementAffliction) {
+    const element = elements.find(
+      (value) => value.toLowerCase() === elementAffliction[1].toLowerCase(),
+    )
+
+    return {
+      name: `Element: ${element} and 10% Weapon Damage. Causes Affliction damage for 6 seconds.`,
+      tier: null,
+    }
+  }
+
+  const attribute = id.match(
+    /^aid_att_(?:(ranged|melee|trap)_)?([a-z]+)(?:_alt(\d))?$/i,
+  )
+
+  if (!attribute) {
+    return null
+  }
+
+  const [, scope, stat, alt] = attribute
+  const tier = Math.min(alt ? Number(alt) + 1 : 1, 5)
+  const candidates = [
+    `aid_att_${stat}_t0${tier}`,
+    scope ? `aid_att_${stat}_${scope}_t0${tier}` : null,
+  ]
+  const record = candidates
+    .map((candidate) => (candidate ? findAlterationRecord(candidate) : null))
+    .find(Boolean)
+
+  return {
+    name: record?.n ?? humanizeAlterationId(id),
+    tier,
+  }
+}
+
 export function findStwAlteration(alterationId: string): InventoryAlteration {
   const id = alterationId.replace(/^alteration:/i, '')
-  const record = alterations[`alteration:${id.toLowerCase()}`]
+  const record = findAlterationRecord(id)
+  const legacy = record ? null : resolveLegacyAlteration(id)
   const tierMatch = id.match(/_t0?([1-9])$/i)
-  const tier = tierMatch ? Math.min(Number(tierMatch[1]), 5) : null
-  const name = record?.n ?? id
+  const tier = legacy
+    ? legacy.tier
+    : tierMatch
+      ? Math.min(Number(tierMatch[1]), 5)
+      : null
+  const name = record?.n ?? legacy?.name ?? humanizeAlterationId(id)
   const elementName = name.match(/^Element: (\w+)/)?.[1]
 
   return {
