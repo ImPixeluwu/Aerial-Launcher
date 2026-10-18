@@ -4,6 +4,7 @@ export type MCPQueryProfileStorageItem = {
     loadedAmmo: number
     inventory_overflow_date: boolean
     level: number
+    alterations: Array<string>
     alterationDefinitions: Array<number>
     durability: number
     itemSource: string

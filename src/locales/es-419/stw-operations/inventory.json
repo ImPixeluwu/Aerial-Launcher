@@ -1,0 +1,47 @@
+{
+  "no-account": "Selecciona una cuenta para ver su inventario.",
+  "account": "Cuenta: {{name}}",
+  "reload": "Recargar",
+  "profile": {
+    "theater0": "Mochila de Campaña",
+    "theater2": "Mochila de Ventures",
+    "outpost0": "Almacén"
+  },
+  "category": {
+    "weapons": "Armas",
+    "traps": "Trampas",
+    "ingredients": "Ingredientes",
+    "materials": "Materiales"
+  },
+  "rarity": {
+    "c": "Común",
+    "uc": "Poco común",
+    "r": "Raro",
+    "vr": "Épico",
+    "sr": "Legendario",
+    "ur": "Mítico"
+  },
+  "material": {
+    "ore": "Mineral",
+    "crystal": "Cristal"
+  },
+  "search-placeholder": "Buscar por nombre o ID de plantilla…",
+  "clear-filters": "Limpiar filtros",
+  "items-shown_one": "{{count}} objeto mostrado",
+  "items-shown_other": "{{count}} objetos mostrados",
+  "load-failed": "No se pudo cargar el inventario",
+  "no-matches": "Ningún objeto coincide con los filtros.",
+  "view-details": "Ver detalles",
+  "level-short": "Nv {{level}}",
+  "alterations": "Alteraciones",
+  "prop": {
+    "category": "Categoría",
+    "rarity": "Rareza",
+    "quantity": "Cantidad",
+    "stacks": "Stacks",
+    "level": "Nivel",
+    "tier": "Tier",
+    "material": "Material",
+    "template": "ID de plantilla"
+  }
+}

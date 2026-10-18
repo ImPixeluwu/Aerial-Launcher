@@ -1,0 +1,347 @@
+import type {
+  InventoryCategory,
+  InventoryFilterType,
+  InventoryItem,
+  InventoryOverview,
+  InventoryProfileId,
+} from '../../types/inventory'
+import type { MCPQueryProfileStorageItem } from '../../types/services/mcp'
+
+import {
+  RarityType,
+  ingredientsJson,
+  rarities,
+  resourcesJson,
+  trapsJson,
+} from '../../config/constants/resources'
+
+export const inventoryProfileIds: Array<InventoryProfileId> = [
+  'theater0',
+  'theater2',
+  'outpost0',
+]
+
+export const inventoryCategories: Array<InventoryCategory> = [
+  'weapons',
+  'traps',
+  'ingredients',
+  'materials',
+]
+
+export const inventoryRarityOrder: Array<RarityType> = [
+  RarityType.Mythic,
+  RarityType.Legendary,
+  RarityType.Epic,
+  RarityType.Rare,
+  RarityType.Uncommon,
+  RarityType.Common,
+]
+
+const categoryByPrefix: Record<string, InventoryCategory> = {
+  weapon: 'weapons',
+  trap: 'traps',
+  ingredient: 'ingredients',
+  worlditem: 'materials',
+}
+
+const rarityTokens: Record<string, RarityType> = {
+  c: RarityType.Common,
+  uc: RarityType.Uncommon,
+  r: RarityType.Rare,
+  vr: RarityType.Epic,
+  sr: RarityType.Legendary,
+  ur: RarityType.Mythic,
+  er: RarityType.Mythic,
+}
+
+const weaponTypePatterns: Array<[RegExp, InventoryFilterType]> = [
+  [/smg/, 'smg'],
+  [/^wid_assault_/, 'assault'],
+  [/^wid_pistol_/, 'pistol'],
+  [/^wid_shotgun_/, 'shotgun'],
+  [/^wid_sniper_/, 'sniper'],
+  [/^wid_(launcher|explosive)_/, 'explosive'],
+  [/^wid_edged_sword/, 'melee_sword'],
+  [/^wid_edged_axe/, 'melee_axe'],
+  [/^wid_edged_scythe/, 'melee_scythe'],
+  [/^wid_piercing_spear/, 'melee_spear'],
+  [/^wid_blunt_hammer/, 'melee_hammer'],
+  [/^wid_blunt_/, 'melee_bat'],
+]
+
+const trapTypePatterns: Array<[RegExp, InventoryFilterType]> = [
+  [/^tid_floor_/, 'trap_floor'],
+  [/^tid_wall_/, 'trap_wall'],
+  [/^tid_ceiling_/, 'trap_ceiling'],
+]
+
+const meleeFilterTypes: Array<InventoryFilterType> = [
+  'melee_sword',
+  'melee_axe',
+  'melee_scythe',
+  'melee_spear',
+  'melee_hammer',
+  'melee_bat',
+]
+
+/**
+ * Splits "Weapon:wid_sniper_boltaction_sr_ore_t05" into its category
+ * and the lower-case id after the colon.
+ */
+export function splitTemplateId(templateId: string) {
+  const [prefix, ...rest] = templateId.split(':')
+  const id = (rest.length > 0 ? rest.join(':') : prefix).toLowerCase()
+  const category =
+    rest.length > 0 ? categoryByPrefix[prefix.toLowerCase()] ?? null : null
+
+  return { category, id }
+}
+
+export function parseInventoryRarity(id: string) {
+  const tokens = id.split('_')
+
+  for (let index = tokens.length - 1; index >= 0; index--) {
+    const rarity = rarityTokens[tokens[index]]
+
+    if (rarity) {
+      return rarity
+    }
+  }
+
+  return null
+}
+
+export function parseInventoryTier(id: string) {
+  const match = id.match(/_t0?([1-9])(?:_|$)/)
+
+  return match ? Number(match[1]) : null
+}
+
+export function parseInventoryMaterial(id: string) {
+  const tokens = id.split('_')
+
+  if (tokens.includes('crystal')) {
+    return 'crystal' as const
+  }
+
+  if (tokens.includes('ore')) {
+    return 'ore' as const
+  }
+
+  return null
+}
+
+export function parseInventoryFilterType(
+  category: InventoryCategory,
+  id: string,
+) {
+  const patterns =
+    category === 'weapons'
+      ? weaponTypePatterns
+      : category === 'traps'
+        ? trapTypePatterns
+        : []
+
+  return patterns.find(([pattern]) => pattern.test(id))?.[1] ?? null
+}
+
+/**
+ * Picks the longest data key contained in the id, so "floor_spikes_wood"
+ * wins over "floor_spikes".
+ */
+function findLongestKey<Data>(id: string, data: Record<string, Data>) {
+  return (
+    Object.keys(data)
+      .filter((key) => id.includes(key))
+      .toSorted((keyA, keyB) => keyB.length - keyA.length)[0] ?? null
+  )
+}
+
+function humanizeWeaponId(id: string) {
+  const ignored = new Set([
+    'wid',
+    'ore',
+    'crystal',
+    ...Object.keys(rarityTokens),
+  ])
+  const words = id
+    .split('_')
+    .filter((token) => !ignored.has(token) && !/^t0?[1-9]$/.test(token))
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+
+  return words.join(' ') || id
+}
+
+function iconRarity(rarity: RarityType | null) {
+  if (!rarity) {
+    return RarityType.Common
+  }
+
+  // Aerial ships the mythic vouchers with the "er" suffix
+  return rarity === RarityType.Mythic ? 'er' : rarity
+}
+
+function describeItem(
+  category: InventoryCategory,
+  id: string,
+  rarity: RarityType | null,
+  filterType: InventoryFilterType | null,
+) {
+  const rarityPrefix = rarity ? `${rarities[rarity]} ` : ''
+
+  if (category === 'traps') {
+    const trapKey = findLongestKey(id, trapsJson)
+
+    if (trapKey) {
+      return {
+        name: `${rarityPrefix}${trapsJson[trapKey].name}`,
+        iconKey: trapKey,
+      }
+    }
+
+    return {
+      name: `${rarityPrefix}${humanizeWeaponId(id.replace(/^tid_/, ''))}`,
+      iconKey: `voucher_generic_trap_${iconRarity(rarity)}`,
+    }
+  }
+
+  if (category === 'ingredients') {
+    const ingredientKey = findLongestKey(id, ingredientsJson)
+
+    return {
+      name: ingredientKey
+        ? ingredientsJson[ingredientKey].name
+        : humanizeWeaponId(id.replace(/^ingredient_/, '')),
+      iconKey: ingredientKey ?? 'question',
+    }
+  }
+
+  if (category === 'materials') {
+    const resource = resourcesJson[id]
+
+    return {
+      name: resource?.name ?? humanizeWeaponId(id),
+      iconKey: resource ? id : 'question',
+    }
+  }
+
+  const isMelee = filterType !== null && meleeFilterTypes.includes(filterType)
+
+  return {
+    name: `${rarityPrefix}${humanizeWeaponId(id)}`,
+    iconKey: `voucher_generic_${isMelee ? 'melee' : 'ranged'}_${iconRarity(rarity)}`,
+  }
+}
+
+export function createEmptyInventoryOverview(
+  profileId: InventoryProfileId,
+): InventoryOverview {
+  return {
+    success: true,
+    profileId,
+    items: [],
+    categoryCounts: {
+      weapons: 0,
+      traps: 0,
+      ingredients: 0,
+      materials: 0,
+    },
+    rarityCounts: {},
+  }
+}
+
+export function parseInventoryProfile(
+  profileId: InventoryProfileId,
+  profileItems: Record<string, MCPQueryProfileStorageItem>,
+): InventoryOverview {
+  const overview = createEmptyInventoryOverview(profileId)
+  const groups = new Map<string, InventoryItem>()
+
+  Object.values(profileItems).forEach((profileItem) => {
+    if (typeof profileItem?.templateId !== 'string') {
+      return
+    }
+
+    const { category, id } = splitTemplateId(profileItem.templateId)
+
+    if (!category) {
+      return
+    }
+
+    const level =
+      typeof profileItem.attributes?.level === 'number'
+        ? profileItem.attributes.level
+        : null
+    const alterations = Array.isArray(profileItem.attributes?.alterations)
+      ? profileItem.attributes.alterations.filter(
+          (alteration): alteration is string => typeof alteration === 'string',
+        )
+      : []
+    const quantity =
+      typeof profileItem.quantity === 'number' ? profileItem.quantity : 1
+    const itemKey = [
+      profileItem.templateId.toLowerCase(),
+      level ?? '',
+      alterations.join(','),
+    ].join('|')
+    const current = groups.get(itemKey)
+
+    if (current) {
+      current.quantity += quantity
+      current.stacks += 1
+
+      return
+    }
+
+    const rarity = parseInventoryRarity(id)
+    const filterType = parseInventoryFilterType(category, id)
+    const { iconKey, name } = describeItem(category, id, rarity, filterType)
+
+    groups.set(itemKey, {
+      itemKey,
+      templateId: profileItem.templateId,
+      name,
+      category,
+      filterType,
+      rarity,
+      tier: parseInventoryTier(id),
+      material: parseInventoryMaterial(id),
+      level,
+      quantity,
+      stacks: 1,
+      alterations,
+      iconKey,
+    })
+  })
+
+  overview.items = [...groups.values()].toSorted((itemA, itemB) => {
+    const categoryDiff =
+      inventoryCategories.indexOf(itemA.category) -
+      inventoryCategories.indexOf(itemB.category)
+
+    if (categoryDiff !== 0) {
+      return categoryDiff
+    }
+
+    const rarityDiff =
+      (itemA.rarity ? inventoryRarityOrder.indexOf(itemA.rarity) : 99) -
+      (itemB.rarity ? inventoryRarityOrder.indexOf(itemB.rarity) : 99)
+
+    if (rarityDiff !== 0) {
+      return rarityDiff
+    }
+
+    return itemA.name.localeCompare(itemB.name)
+  })
+
+  overview.items.forEach((item) => {
+    overview.categoryCounts[item.category] += 1
+
+    if (item.rarity) {
+      overview.rarityCounts[item.rarity] =
+        (overview.rarityCounts[item.rarity] ?? 0) + 1
+    }
+  })
+
+  return overview
+}

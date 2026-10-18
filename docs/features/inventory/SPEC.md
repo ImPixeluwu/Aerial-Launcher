@@ -212,3 +212,19 @@ con FModel. Así son idénticos al juego y no dependen de lo que distribuya GLOW
 5. `Ammo:ammodatashells` → no aparece.
 6. Filtrar por rareza `sr` oculta los ingredientes sin rareza.
 7. Dos armas con el mismo `templateId` pero distinto `level` → dos objetos.
+
+## 11. Implementación en Aerial (v1)
+
+| Pieza | Archivo |
+|---|---|
+| Petición MCP | `src/services/endpoints/mcp.ts` → `getQueryProfileInventory` |
+| Clasificación y agrupación (§3–§4, puro) | `src/lib/parsers/inventory.ts` |
+| Pruebas de §10 | `src/lib/parsers/inventory.test.ts` (`npm test`) |
+| Proceso principal | `src/kernel/core/inventory.ts`, `ipcMain.handle('inventory:get-overview')` en `src/kernel/main.ts` |
+| Puente al renderer | `src/kernel/preload-actions/inventory.ts` → `window.electronAPI.getInventoryOverview` |
+| Página | `src/routes/stw-operations/inventory/` |
+| Menú | barra lateral, menú personalizable (`inventory`), `routeTree.gen.ts` |
+| Textos | `src/locales/{en-US,es-419}/stw-operations/inventory.json`; el resto de idiomas cae a inglés |
+
+La cuenta mostrada es la cuenta activa de Aerial (la de la cabecera), igual
+que en GLOW; al cambiarla se reinician los filtros y se recargan los datos.

@@ -1,0 +1,47 @@
+{
+  "no-account": "Select an account to view its inventory.",
+  "account": "Account: {{name}}",
+  "reload": "Reload",
+  "profile": {
+    "theater0": "Campaign backpack",
+    "theater2": "Ventures backpack",
+    "outpost0": "Storage"
+  },
+  "category": {
+    "weapons": "Weapons",
+    "traps": "Traps",
+    "ingredients": "Ingredients",
+    "materials": "Materials"
+  },
+  "rarity": {
+    "c": "Common",
+    "uc": "Uncommon",
+    "r": "Rare",
+    "vr": "Epic",
+    "sr": "Legendary",
+    "ur": "Mythic"
+  },
+  "material": {
+    "ore": "Ore",
+    "crystal": "Crystal"
+  },
+  "search-placeholder": "Search by name or template ID…",
+  "clear-filters": "Clear filters",
+  "items-shown_one": "{{count}} item shown",
+  "items-shown_other": "{{count}} items shown",
+  "load-failed": "Could not load the inventory",
+  "no-matches": "No items match your filters.",
+  "view-details": "View details",
+  "level-short": "Lv {{level}}",
+  "alterations": "Alterations",
+  "prop": {
+    "category": "Category",
+    "rarity": "Rarity",
+    "quantity": "Quantity",
+    "stacks": "Stacks",
+    "level": "Level",
+    "tier": "Tier",
+    "material": "Material",
+    "template": "Template ID"
+  }
+}
