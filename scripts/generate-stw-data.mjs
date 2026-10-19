@@ -88,6 +88,81 @@ function displayName(entry) {
     : entry.DisplayName
 }
 
+function indexRows(file) {
+  return Object.fromEntries(
+    Object.entries(readJson(path.join(datatablesDir, file))[0].Rows).map(
+      ([rowName, row]) => [rowName.toLowerCase(), row],
+    ),
+  )
+}
+
+const weaponRows = {
+  ...indexRows('RangedWeapons.json'),
+  ...indexRows('MeleeWeapons.json'),
+}
+const trapRows = indexRows('Traps.json')
+const durabilityRows = readJson(
+  path.join(datatablesDir, 'WeaponDurabilityRarity.json'),
+)[0].Rows
+
+/**
+ * Level scaling from the stat row: value * (1 + (level - BaseLevel) * scale).
+ * Only damage and impact scale in the current data.
+ */
+function scaling(row) {
+  return compact({
+    baseLevel: row.BaseLevel ?? 1,
+    damage: round(row.DmgScale) || undefined,
+    impact: round(row.ImpactDmgScale) || undefined,
+  })
+}
+
+function durability(row, rarity, fallback) {
+  const value = durabilityRows[row.DurabilityRowName]?.[rarity]
+
+  return round(typeof value === 'number' ? value : fallback)
+}
+
+function statsFromRow(row, kind, rarity) {
+  const common = {
+    damage: round(row.DmgPB),
+    impact: round(row.ImpactDmgPB) || undefined,
+    critChance: round(row.DiceCritChance),
+    critDamage: round(row.DiceCritDamageMultiplier),
+    durability: durability(row, rarity),
+  }
+
+  if (kind === 'melee') {
+    return compact({
+      ...common,
+      attackTime: round(row.SwingTime / (row.SwingPlaySpeed || 1)),
+    })
+  }
+
+  if (kind === 'trap') {
+    return compact({
+      ...common,
+      fireDelay: round(row.FireDelay),
+      reloadTime: round(row.ReloadTime) || undefined,
+    })
+  }
+
+  // Burst weapons fire CartridgePerFire shots per trigger pull
+  const fireRate =
+    row.BurstFiringRate > 0 && row.CartridgePerFire > 1
+      ? row.BurstFiringRate / row.CartridgePerFire
+      : row.FiringRate
+
+  return compact({
+    ...common,
+    fireRate: round(fireRate),
+    clipSize: round(row.ClipSize) || undefined,
+    reloadTime: round(row.ReloadTime) || undefined,
+    ammoCost: round(row.AmmoCostPerFire) || undefined,
+  })
+}
+
+// Fallbacks from PegLeg for the few items without a stat row
 function meleeStats(entry) {
   const stats = entry.MeleeWeaponStats
   const swingPlaySpeed = entry.RawWeaponStats?.SwingPlaySpeed || 1
@@ -131,7 +206,7 @@ function trapStats(entry) {
   })
 }
 
-function itemRecord(entry, kind, stats) {
+function itemRecord(entry, kind, stats, statScaling) {
   return compact({
     n: displayName(entry),
     r: rarityCodes[entry.Rarity],
@@ -143,6 +218,7 @@ function itemRecord(entry, kind, stats) {
     i: imageFile(entry.ImagePaths?.SmallPreview),
     l: imageFile(entry.ImagePaths?.LargePreview),
     b: stats,
+    x: statScaling,
   })
 }
 
@@ -150,28 +226,48 @@ const items = {}
 
 Object.entries(readJson(path.join(namedItemsDir, 'Weapon.json'))).forEach(
   ([templateId, entry]) => {
-    if (entry.MeleeWeaponStats) {
-      items[templateId.toLowerCase()] = itemRecord(
-        entry,
-        'melee',
-        meleeStats(entry),
-      )
-    } else if (entry.RangedWeaponStats) {
-      items[templateId.toLowerCase()] = itemRecord(
-        entry,
-        'ranged',
-        rangedStats(entry),
-      )
+    const kind = entry.MeleeWeaponStats
+      ? 'melee'
+      : entry.RangedWeaponStats
+        ? 'ranged'
+        : null
+
+    if (!kind) {
+      return
     }
+
+    const row = weaponRows[entry.RawWeaponStatRow?.toLowerCase()]
+    const raw = entry.RawWeaponStats ?? {}
+
+    items[templateId.toLowerCase()] = itemRecord(
+      entry,
+      kind,
+      row
+        ? statsFromRow(row, kind, entry.Rarity)
+        : kind === 'melee'
+          ? meleeStats(entry)
+          : rangedStats(entry),
+      scaling(row ?? raw),
+    )
   },
 )
 
 Object.entries(readJson(path.join(namedItemsDir, 'Trap.json'))).forEach(
   ([templateId, entry]) => {
+    const row =
+      trapRows[
+        `trap_${templateId.split(':')[1].replace(/^tid_/i, '')}`.toLowerCase()
+      ]
+
     items[templateId.toLowerCase()] = itemRecord(
       entry,
       'trap',
-      entry.TrapStats ? trapStats(entry) : undefined,
+      row
+        ? statsFromRow(row, 'trap', entry.Rarity)
+        : entry.TrapStats
+          ? trapStats(entry)
+          : undefined,
+      row ? scaling(row) : undefined,
     )
   },
 )
@@ -189,6 +285,58 @@ simpleKinds.forEach(([file, kind]) => {
   )
 })
 
+// Perk modifiers that change the stats shown in the item details
+const statAttributes = new Set([
+  'OutgoingAbilityDamage',
+  'OutgoingBaseImpactDamage',
+  'DiceCritMultiplier',
+  'CritRating',
+  'WeaponRateOfFire',
+  'WeaponAmmoClipSize',
+  'WeaponReloadSpeed',
+  'CharacterItemDurabilityDecayModifier',
+])
+
+/**
+ * [attribute, 'a' (additive) | 'm' (multiplicative), value]. Some perks list
+ * the same attribute twice with different values; keep the one that matches
+ * the percentage in the perk text.
+ */
+function alterationModifiers(alterationId, entry) {
+  // Conditional and gameplay perks (afflicted targets, streaks, aiming...)
+  // don't change the stats shown on the item
+  if (!/^alteration:aid_(att|ele)_/i.test(alterationId)) {
+    return undefined
+  }
+
+  const textPercent = Number(entry.DisplayName?.match(/([\d.]+)%/)?.[1])
+  const byAttribute = new Map()
+
+  ;(entry.Modifiers ?? []).forEach((modifier) => {
+    if (!statAttributes.has(modifier.targetAttribute)) {
+      return
+    }
+
+    const mode = modifier.operatorMode === 'Additive' ? 'a' : 'm'
+    const value = round(modifier.operand)
+    const current = byAttribute.get(modifier.targetAttribute)
+    const matchesText =
+      Number.isFinite(textPercent) &&
+      mode === 'm' &&
+      Math.abs((value - 1) * 100 - textPercent) < 0.6
+
+    if (!current || matchesText) {
+      byAttribute.set(modifier.targetAttribute, [
+        modifier.targetAttribute,
+        mode,
+        value,
+      ])
+    }
+  })
+
+  return byAttribute.size > 0 ? [...byAttribute.values()] : undefined
+}
+
 const alterations = Object.fromEntries(
   Object.entries(readJson(path.join(namedItemsDir, 'Alteration.json'))).map(
     ([alterationId, entry]) => [
@@ -196,6 +344,7 @@ const alterations = Object.fromEntries(
       compact({
         n: entry.DisplayName,
         r: rarityCodes[entry.Rarity],
+        m: alterationModifiers(alterationId, entry),
       }),
     ],
   ),

@@ -39,7 +39,22 @@ export type InventoryItemBaseStats = Partial<{
   clipSize: number
   reloadTime: number
   durability: number
+  ammoCost: number
 }>
+
+/**
+ * Stats at the item level with its perks applied. Damage does not include
+ * the player's F.O.R.T. bonus, which depends on the account.
+ */
+export type InventoryItemStats = InventoryItemBaseStats & {
+  // Sum of "+N Critical Rating" perks; the game converts it to crit chance
+  critRating?: number
+}
+
+/**
+ * [attribute, 'a' (additive) | 'm' (multiplicative), value]
+ */
+export type InventoryStatModifier = [string, 'a' | 'm', number]
 
 export type InventoryElement =
   | 'Energy'
@@ -54,6 +69,7 @@ export type InventoryAlteration = {
   tier: number | null
   rarity: RarityType | null
   element: InventoryElement | null
+  modifiers: Array<InventoryStatModifier>
 }
 
 export type InventoryItem = {
@@ -74,6 +90,7 @@ export type InventoryItem = {
   stacks: number
   alterations: Array<InventoryAlteration>
   baseStats: InventoryItemBaseStats | null
+  stats: InventoryItemStats | null
   properties: Array<{ key: string; value: string }>
   iconKey: string
   imageUrl: string | null

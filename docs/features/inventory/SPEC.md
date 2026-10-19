@@ -192,38 +192,48 @@ Solo se calcula para armas y trampas.
 
 ### 6.3 Estadísticas
 
-La API de Epic solo devuelve `templateId`, `level`, `max_level_bonus`,
-`alterations` (ids de perks) y `durability`; **no devuelve estadísticas**.
+La API de Epic solo devuelve `templateId`, `level`, `max_level_bonus` y los ids
+de perks; el juego calcula las estadísticas en el cliente. Aquí se calculan
+con las tablas del juego de archeruwu/STW-Datatables [DATOS]:
 
-Lo que se puede mostrar [DATOS]:
+- Fila de estadísticas del objeto: `RangedWeapons`, `MeleeWeapons` o `Traps`
+  (fila `RawWeaponStatRow` de PegLeg; trampas: `Trap_<id sin tid_>`). Las 12
+  armas sin fila usan los valores de PegLeg.
+- Escala por nivel: `valor × (1 + (nivel − BaseLevel) × escala)`. Solo escalan
+  el daño (`DmgScale`) y el impacto (`ImpactDmgScale`), 0,05 en todas las armas;
+  nivel 50 → ×3,45.
+- Durabilidad: `WeaponDurabilityRarity[DurabilityRowName][rareza]`.
+- Cadencia: `BurstFiringRate / CartridgePerFire` en armas de ráfaga, si no
+  `FiringRate`. Velocidad de ataque cuerpo a cuerpo: `SwingTime / SwingPlaySpeed`.
+- Perks: modificadores de `Alteration.json` de las perks `aid_att_*` y
+  `aid_ele_*` (las legacy, vía su perk migrada). Varias perks sobre la misma
+  estadística se suman (+10 % y +15 % = +25 %) [INFERIDO: agregación estándar
+  de Unreal]. Daño, impacto, cadencia, cargador, recarga y durabilidad se
+  multiplican; el daño crítico se suma.
 
-| Dato | Origen | ¿Exacto como en el juego? |
-|---|---|---|
-| Perks: texto, tier (barras 1–5) y rareza | `Alteration.json` | Sí para el texto de los datos. Las perks de crítico aparecen como "+N Critical Rating"; el juego las muestra como % (ver abajo) |
-| Descripción | `Description` | Sí |
-| Velocidad de ataque (cuerpo a cuerpo) | `SwingTime / SwingPlaySpeed` | Sí: 0,4667 / 0,9 = 0,52 s (captura) |
-| Cadencia, cargador, recarga (a distancia); retardo y recarga (trampas) | `RangedWeaponStats`, `TrapStats` | Sí en valor base, sin perks |
-| Probabilidad y daño crítico base | `BaseCritChance`, `BaseCritDamage` | Sí en valor base (15 % / 50 % en la captura) |
-| Daño, impacto, durabilidad | valores base | **No**: el juego los escala con el nivel |
+Comprobado contra el juego (Legendary T5, nivel 50):
 
-Lo que **no** se puede calcular con estos datos (desconocido):
+| Arma | Estadística | Calculado | Juego |
+|---|---|---|---|
+| Sunbeam Stormblade | Impacto | 741,75 | 741,7 |
+| Sunbeam Stormblade | Durabilidad | 300 | 300 |
+| Sunbeam Stormblade | Velocidad de ataque | 0,52 s | 0,52 s |
+| Brightcore Vacuum Tube Launcher | Impacto | 9.704,85 | 9.704,9 |
+| Brightcore Vacuum Tube Launcher | Durabilidad | 150 | 150 |
+| Brightcore Vacuum Tube Launcher | Cadencia | 2,33 | 2,33 |
+| Brightcore Vacuum Tube Launcher | Daño crítico | 140 % | 140 % |
+| Brightcore Vacuum Tube Launcher | Cargador / recarga / munición | 90 / 3,0 / 10 | 90 / 3,0 / 10 |
 
-- La curva que escala daño, impacto, durabilidad y cadencia con el nivel o el
-  PL. Capturas del juego (Legendary T5, NV 50, PL 130): Sunbeam Stormblade,
-  daño 162 → 1.743,8, impacto 215 → 741,7, durabilidad 100 → 300; Brightcore
-  Vacuum Tube Launcher, daño 333 → 92.453,7, impacto 2.813 → 9.704,9,
-  durabilidad 50 → 150, cadencia 1,00 → 2,33. Impacto (×3,45) y durabilidad
-  (×3) coinciden entre las dos armas a ese nivel, pero no hay datos de otros
-  niveles; el daño y la cadencia dependen además del arma.
-- La API de Epic no devuelve estadísticas finales: el juego las calcula en el
-  cliente a partir de sus tablas.
-  Los campos `DmgScale` e `ImpactDmgScale` (0,05) no reproducen esos valores.
-- La conversión de "Critical Rating" a %: en la captura, +10/+15/+20 de rating
-  se muestran como +14/+21/+28 %, es decir ×1,4 a ese nivel; con un solo punto
-  no se puede saber si el factor depende del nivel.
-- Por tanto, tampoco el DPS final.
+Lo que no coincide (desconocido o fuera del objeto):
 
-Por eso la ficha muestra **"Estadísticas base"**.
+- **Daño**: el juego multiplica además por la bonificación de Ataque del
+  F.O.R.T. de la cuenta, que no forma parte del objeto. La ficha muestra el daño
+  del arma con nivel y perks, con una nota que lo indica.
+- **Probabilidad de crítico con perks**: las perks dan "Critical Rating"; la
+  curva `Item.All.CritRatingToCritChance` no reproduce el valor del juego
+  (+45 de rating → +35,5 % frente a +63 % en el juego). Se muestra la
+  probabilidad base y, aparte, el índice de crítico total de las perks.
+- DPS: depende del daño final, no se muestra.
 
 ### 6.4 Perks
 
@@ -276,9 +286,11 @@ instalación propia).
   [CONFIRMADO para el formato de cantidad].
 - Al pulsar una tarjeta, ficha de detalle al estilo del juego [DECISIÓN]:
   cabecera con rareza | categoría | subtipo, nombre, PL, estrellas y
-  "NV x / máx"; estadísticas base (§6.3); perks (§6.4); descripción;
+  "NV x / máx"; estadísticas al nivel del objeto (§6.3); perks (§6.4); descripción;
   cantidad, stacks, material, `templateId` y propiedades en bruto
-  (plegadas). Escape o clic fuera la cierra
+  (plegadas).
+- Flechas anterior/siguiente en la ficha (y teclas ← →) para recorrer los
+  objetos de la lista filtrada, con la posición "N / total" [DECISIÓN]. Escape o clic fuera la cierra
   [CONFIRMADO].
 - Estados: cargando, error (con el mensaje), vacío ("Ningún objeto coincide")
   [CONFIRMADO].

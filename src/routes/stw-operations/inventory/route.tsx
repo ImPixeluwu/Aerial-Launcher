@@ -1,14 +1,14 @@
 import type {
   InventoryAlteration,
   InventoryItem,
-  InventoryItemBaseStats,
+  InventoryItemStats,
 } from '../../../types/inventory'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { createRoute } from '@tanstack/react-router'
 import { UpdateIcon } from '@radix-ui/react-icons'
-import { Search, Star, X, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Star, X, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { RarityType, raritiesColor } from '../../../config/constants/resources'
@@ -125,6 +125,17 @@ function Content() {
         {t('inventory.no-account')}
       </div>
     )
+  }
+
+  const selectedIndex = selectedItem
+    ? filteredItems.findIndex((item) => item.itemKey === selectedItem.itemKey)
+    : -1
+  const selectItemAt = (index: number) => {
+    const next = filteredItems[index]
+
+    if (next) {
+      setSelectedItemKey(next.itemKey)
+    }
   }
 
   const availableRarities = inventoryRarityOrder.filter(
@@ -263,7 +274,14 @@ function Content() {
 
       <ItemDetail
         item={selectedItem}
+        position={
+          selectedIndex >= 0
+            ? { index: selectedIndex, total: filteredItems.length }
+            : null
+        }
         onClose={() => setSelectedItemKey(null)}
+        onPrevious={() => selectItemAt(selectedIndex - 1)}
+        onNext={() => selectItemAt(selectedIndex + 1)}
       />
     </div>
   )
@@ -432,8 +450,10 @@ function PerkRow({ alteration }: { alteration: InventoryAlteration }) {
   )
 }
 
-function formatStat(key: keyof InventoryItemBaseStats, value: number) {
+function formatStat(key: keyof InventoryItemStats, value: number) {
   switch (key) {
+    case 'critRating':
+      return `+${value}`
     case 'critChance':
     case 'critDamage':
       return `${Math.round(value * 1000) / 10}%`
@@ -448,31 +468,61 @@ function formatStat(key: keyof InventoryItemBaseStats, value: number) {
   }
 }
 
-const statOrder: Array<keyof InventoryItemBaseStats> = [
+const statOrder: Array<keyof InventoryItemStats> = [
   'damage',
   'critChance',
+  'critRating',
   'critDamage',
   'attackTime',
   'fireRate',
   'fireDelay',
   'clipSize',
   'reloadTime',
+  'ammoCost',
   'durability',
   'impact',
 ]
 
 function ItemDetail({
   item,
+  position,
   onClose,
+  onNext,
+  onPrevious,
 }: {
   item: InventoryItem | null
+  position: { index: number; total: number } | null
   onClose: () => void
+  onNext: () => void
+  onPrevious: () => void
 }) {
   const { t } = useTranslation(['stw-operations'])
+  const hasPrevious = position !== null && position.index > 0
+  const hasNext = position !== null && position.index < position.total - 1
 
-  const stats = item?.baseStats
+  useEffect(() => {
+    if (!item) {
+      return
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft' && hasPrevious) {
+        event.preventDefault()
+        onPrevious()
+      } else if (event.key === 'ArrowRight' && hasNext) {
+        event.preventDefault()
+        onNext()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [item, hasPrevious, hasNext, onPrevious, onNext])
+
+  const stats = item?.stats
     ? statOrder.flatMap((key) => {
-        const value = item.baseStats?.[key]
+        const value = item.stats?.[key]
 
         return typeof value === 'number' ? [[key, value] as const] : []
       })
@@ -503,6 +553,33 @@ function ItemDetail({
         hideCloseButton
         onOpenAutoFocus={(event) => event.preventDefault()}
       >
+        {position && (
+          <div className="absolute left-2 top-2 z-10 flex items-center gap-1 text-sm text-muted-foreground">
+            <button
+              type="button"
+              className="flex size-10 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              onClick={onPrevious}
+              disabled={!hasPrevious}
+              aria-label={t('inventory.previous')}
+              title={t('inventory.previous')}
+            >
+              <ChevronLeft className="size-6" />
+            </button>
+            <span className="min-w-14 text-center tabular-nums">
+              {position.index + 1} / {position.total}
+            </span>
+            <button
+              type="button"
+              className="flex size-10 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              onClick={onNext}
+              disabled={!hasNext}
+              aria-label={t('inventory.next')}
+              title={t('inventory.next')}
+            >
+              <ChevronRight className="size-6" />
+            </button>
+          </div>
+        )}
         <DialogClose
           className="absolute right-2 top-2 z-10 flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={t('inventory.close')}
@@ -563,7 +640,9 @@ function ItemDetail({
                   {stats.length > 0 && (
                     <section className="text-sm">
                       <h3 className="mb-2 font-semibold">
-                        {t('inventory.base-stats')}
+                        {t('inventory.stats-title', {
+                          level: item.level ?? 1,
+                        })}
                       </h3>
                       <dl className="divide-y rounded-md border">
                         {stats.map(([key, value]) => (
@@ -580,6 +659,11 @@ function ItemDetail({
                           </div>
                         ))}
                       </dl>
+                      {stats.some(([key]) => key === 'damage') && (
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          {t('inventory.stats-note')}
+                        </p>
+                      )}
                     </section>
                   )}
 

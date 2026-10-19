@@ -3,6 +3,8 @@ import type {
   InventoryElement,
   InventoryFilterType,
   InventoryItemBaseStats,
+  InventoryItemStats,
+  InventoryStatModifier,
 } from '../../types/inventory'
 
 import { RarityType } from '../../config/constants/resources'
@@ -26,11 +28,22 @@ type StwItemRecord = {
   i?: string
   l?: string
   b?: InventoryItemBaseStats
+  x?: StwStatScaling
+}
+
+/**
+ * value * (1 + (level - baseLevel) * scale) for the stats that scale
+ */
+type StwStatScaling = {
+  baseLevel: number
+  damage?: number
+  impact?: number
 }
 
 type StwAlterationRecord = {
   n: string
   r?: string
+  m?: Array<InventoryStatModifier>
 }
 
 type StwRatingTier = {
@@ -38,9 +51,12 @@ type StwRatingTier = {
   Ratings: Array<number>
 }
 
-const items = itemsJson.items as Record<string, StwItemRecord>
+const items = itemsJson.items as unknown as Record<string, StwItemRecord>
 const descriptions = itemsJson.descriptions as Array<string>
-const alterations = alterationsJson as Record<string, StwAlterationRecord>
+const alterations = alterationsJson as unknown as Record<
+  string,
+  StwAlterationRecord
+>
 const itemRatings = itemRatingsJson as Record<string, StwRatingTier>
 const legacyAlterations = legacyAlterationsJson as Record<string, Array<string>>
 
@@ -105,6 +121,7 @@ export function findStwItem(templateId: string) {
       : null,
     imageUrl: imageUrl(record.i),
     baseStats: record.b ?? null,
+    scaling: record.x ?? null,
   }
 }
 
@@ -158,6 +175,7 @@ function resolveMigratedAlteration(id: string) {
     name: joinSentences(records.map((record) => record.n)),
     tier: parseAlterationTier(mainId),
     rarity: records[0].r,
+    modifiers: records.flatMap((record) => record.m ?? []),
   }
 }
 
@@ -186,6 +204,7 @@ function resolveLegacyAlteration(id: string) {
       name: `Element: ${element} and 10% Weapon Damage. Causes Affliction damage for 6 seconds.`,
       tier: null,
       rarity: undefined,
+      modifiers: [],
     }
   }
 
@@ -211,6 +230,7 @@ function resolveLegacyAlteration(id: string) {
     name: record?.n ?? humanizeAlterationId(id),
     tier,
     rarity: record?.r,
+    modifiers: record?.m ?? [],
   }
 }
 
@@ -236,7 +256,91 @@ export function findStwAlteration(alterationId: string): InventoryAlteration {
             id.toLowerCase().includes(element.toLowerCase()),
           ) ?? null
         : null),
+    modifiers: record?.m ?? legacy?.modifiers ?? [],
   }
+}
+
+/**
+ * Item stats at its level with its perks applied. Level scaling and perk
+ * values come from the game data; perks on the same stat add up
+ * (+10% and +15% = +25%). Damage leaves out the player's F.O.R.T. bonus.
+ */
+export function calculateStwStats({
+  alterations: itemAlterations,
+  baseStats,
+  level,
+  scaling,
+}: {
+  alterations: Array<InventoryAlteration>
+  baseStats: InventoryItemBaseStats | null
+  level: number | null
+  scaling: StwStatScaling | null
+}): InventoryItemStats | null {
+  if (!baseStats) {
+    return null
+  }
+
+  const modifiers = itemAlterations.flatMap(
+    (alteration) => alteration.modifiers,
+  )
+  const multiplier = (attribute: string) =>
+    1 +
+    modifiers
+      .filter(([name, mode]) => name === attribute && mode === 'm')
+      .reduce((total, [, , value]) => total + (value - 1), 0)
+  const additive = (attribute: string) =>
+    modifiers
+      .filter(([name, mode]) => name === attribute && mode === 'a')
+      .reduce((total, [, , value]) => total + value, 0)
+  const levelFactor = (scale?: number) =>
+    scale && level !== null
+      ? 1 + (level - (scaling?.baseLevel ?? 1)) * scale
+      : 1
+  const scale = (value: number | undefined, factor: number) =>
+    value === undefined ? undefined : value * factor
+
+  const fireRateMultiplier = multiplier('WeaponRateOfFire')
+  const critRating = additive('CritRating')
+  const stats: InventoryItemStats = {
+    ...baseStats,
+    damage: scale(
+      baseStats.damage,
+      levelFactor(scaling?.damage) * multiplier('OutgoingAbilityDamage'),
+    ),
+    impact: scale(
+      baseStats.impact,
+      levelFactor(scaling?.impact) * multiplier('OutgoingBaseImpactDamage'),
+    ),
+    critDamage:
+      baseStats.critDamage === undefined
+        ? undefined
+        : baseStats.critDamage + additive('DiceCritMultiplier'),
+    fireRate: scale(baseStats.fireRate, fireRateMultiplier),
+    attackTime: scale(baseStats.attackTime, 1 / fireRateMultiplier),
+    clipSize:
+      baseStats.clipSize === undefined
+        ? undefined
+        : Math.round(baseStats.clipSize * multiplier('WeaponAmmoClipSize')),
+    reloadTime: scale(
+      baseStats.reloadTime,
+      1 / multiplier('WeaponReloadSpeed'),
+    ),
+    durability:
+      baseStats.durability === undefined
+        ? undefined
+        : Math.round(
+            baseStats.durability *
+              multiplier('CharacterItemDurabilityDecayModifier'),
+          ),
+  }
+
+  if (critRating > 0) {
+    stats.critRating = critRating
+  }
+
+  return Object.fromEntries(
+    Object.entries(stats).filter(([, value]) => value !== undefined),
+  ) as InventoryItemStats
 }
 
 /**

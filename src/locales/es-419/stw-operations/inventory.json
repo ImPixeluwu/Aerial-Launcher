@@ -44,7 +44,6 @@
     "template": "ID de plantilla"
   },
   "level-of": "NV {{level}} / {{max}}",
-  "base-stats": "Estadísticas base",
   "stat": {
     "damage": "Daño",
     "impact": "Impacto",
@@ -55,9 +54,15 @@
     "fireDelay": "Retardo de disparo",
     "clipSize": "Cargador",
     "reloadTime": "Recarga",
-    "durability": "Durabilidad"
+    "durability": "Durabilidad",
+    "critRating": "Índice de crítico (perks)",
+    "ammoCost": "Coste de munición"
   },
   "no-perks": "Esta arma no tiene perks en los datos de su perfil.",
   "properties": "Propiedades",
-  "close": "Cerrar"
+  "close": "Cerrar",
+  "stats-title": "Estadísticas (nivel {{level}})",
+  "stats-note": "El daño no incluye tu bonificación del F.O.R.T.",
+  "previous": "Objeto anterior",
+  "next": "Objeto siguiente"
 }

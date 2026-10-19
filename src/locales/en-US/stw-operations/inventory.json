@@ -44,7 +44,6 @@
     "template": "Template ID"
   },
   "level-of": "LV {{level}} / {{max}}",
-  "base-stats": "Base stats",
   "stat": {
     "damage": "Damage",
     "impact": "Impact",
@@ -55,9 +54,15 @@
     "fireDelay": "Fire Delay",
     "clipSize": "Magazine Size",
     "reloadTime": "Reload Time",
-    "durability": "Durability"
+    "durability": "Durability",
+    "critRating": "Critical Rating (perks)",
+    "ammoCost": "Ammo Cost"
   },
   "no-perks": "This weapon has no perks in its profile data.",
   "properties": "Properties",
-  "close": "Close"
+  "close": "Close",
+  "stats-title": "Stats (level {{level}})",
+  "stats-note": "Damage does not include your F.O.R.T. bonus.",
+  "previous": "Previous item",
+  "next": "Next item"
 }

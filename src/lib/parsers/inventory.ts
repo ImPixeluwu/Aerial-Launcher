@@ -23,6 +23,7 @@ import {
 
 import {
   calculateStwPowerLevel,
+  calculateStwStats,
   findStwAlteration,
   findStwItem,
   stwMaxLevel,
@@ -325,6 +326,7 @@ export function parseInventoryProfile(
     }
 
     const gameItem = findStwItem(profileItem.templateId)
+    const alterations = alterationIds.map(findStwAlteration)
     const rarity = gameItem?.rarity ?? parseInventoryRarity(id)
     const tier = gameItem?.tier ?? parseInventoryTier(id)
     const filterType =
@@ -350,8 +352,14 @@ export function parseInventoryProfile(
         : null,
       quantity,
       stacks: 1,
-      alterations: alterationIds.map(findStwAlteration),
+      alterations,
       baseStats: gameItem?.baseStats ?? null,
+      stats: calculateStwStats({
+        alterations,
+        baseStats: gameItem?.baseStats ?? null,
+        level,
+        scaling: gameItem?.scaling ?? null,
+      }),
       properties: readProperties(profileItem.attributes),
       iconKey: fallback.iconKey,
       imageUrl: gameItem?.imageUrl ?? null,

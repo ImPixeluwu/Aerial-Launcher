@@ -68,7 +68,7 @@ describe('parseInventoryProfile', () => {
         attackTime: 0.5185,
       },
     })
-    expect(overview.items[0].alterations).toEqual([
+    expect(overview.items[0].alterations).toMatchObject([
       {
         id: 'aid_att_damage_t01',
         name: '+10% Damage',
@@ -277,6 +277,79 @@ describe('parseInventoryProfile', () => {
       name: 'Silver Templar',
       quantity: 1,
     })
+  })
+})
+
+describe('item stats at level', () => {
+  // In-game values from screenshots: Legendary T5 at level 50
+  it('matches the game for the Brightcore Vacuum Tube Launcher', () => {
+    const overview = parse({
+      a: item('Weapon:wid_launcher_vacuumtube_sr_ore_t05', 1, {
+        level: 50,
+        alterations: [
+          'Alteration:aid_att_ranged_damage',
+          'Alteration:aid_att_ranged_damage',
+          'Alteration:aid_att_ranged_damage_alt1',
+          'Alteration:aid_att_ranged_critdamage_alt2',
+          'Alteration:aid_g_ranged_energyaffliction',
+        ],
+      }),
+    })
+    const stats = overview.items[0].stats
+
+    expect(stats?.impact).toBeCloseTo(9704.85, 1)
+    expect(stats?.durability).toBe(150)
+    expect(stats?.fireRate).toBeCloseTo(2.33, 2)
+    expect(stats?.critChance).toBe(0.1)
+    expect(stats?.critDamage).toBeCloseTo(1.4, 5)
+    expect(stats?.clipSize).toBe(90)
+    expect(stats?.reloadTime).toBe(3)
+    expect(stats?.ammoCost).toBe(10)
+    // 333 * 3.45 * (1 + 0.1 + 0.1 + 0.15 + 0.1); the game adds F.O.R.T.
+    expect(stats?.damage).toBeCloseTo(333 * 3.45 * 1.45, 1)
+  })
+
+  it('matches the game for the Sunbeam Stormblade', () => {
+    const overview = parse({
+      a: item('Weapon:wid_edged_sword_medium_laser_sr_crystal_t05', 1, {
+        level: 50,
+        alterations: [
+          'Alteration:aid_att_damage_t01',
+          'Alteration:aid_att_critchance_t01',
+          'Alteration:aid_att_critchance_t02',
+          'Alteration:aid_att_critchance_t03',
+        ],
+      }),
+    })
+    const stats = overview.items[0].stats
+
+    expect(stats?.impact).toBeCloseTo(741.75, 1)
+    expect(stats?.durability).toBe(300)
+    expect(stats?.attackTime).toBeCloseTo(0.52, 2)
+    expect(stats?.critDamage).toBe(0.5)
+    expect(stats?.critRating).toBe(45)
+  })
+
+  it('applies fire rate, magazine, reload and durability perks', () => {
+    const overview = parse({
+      a: item('Weapon:wid_launcher_vacuumtube_sr_ore_t05', 1, {
+        level: 1,
+        alterations: [
+          'Alteration:aid_att_firerate_ranged_t01',
+          'Alteration:aid_att_magazinesize_t01',
+          'Alteration:aid_att_reloadspeed_ranged_t01',
+          'Alteration:aid_att_maxdurability_t01',
+          'Alteration:aid_conditional_afflicted_dmgbonus_t05',
+        ],
+      }),
+    })
+    const stats = overview.items[0].stats
+
+    expect(stats?.damage).toBe(333)
+    expect(stats?.fireRate).toBeCloseTo((7 / 3) * 1.14, 3)
+    expect(stats?.clipSize).toBe(Math.round(90 * 1.25))
+    expect(stats?.reloadTime).toBeCloseTo(3 / 1.25, 5)
+    expect(stats?.durability).toBe(Math.round(150 * 1.14))
   })
 })
 
