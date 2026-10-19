@@ -1,21 +1,27 @@
 /**
  * Builds the compact Save the World item data used by the inventory viewer.
  *
- * Source: PegLegFN/PegLegResources (https://github.com/PegLegFN/PegLegResources)
+ * Sources:
+ * - PegLegFN/PegLegResources (https://github.com/PegLegFN/PegLegResources)
+ * - archeruwu/STW-Datatables (https://github.com/archeruwu/STW-Datatables),
+ *   for MigrationMapping.json: the game's own table that maps legacy perks
+ *   to the current ones
  *
  * Usage:
- *   git clone --depth 1 -b major https://github.com/PegLegFN/PegLegResources <dir>
- *   node scripts/generate-stw-data.mjs <dir>
+ *   git clone --depth 1 -b major https://github.com/PegLegFN/PegLegResources <pegleg>
+ *   git clone --depth 1 https://github.com/archeruwu/STW-Datatables <datatables>
+ *   node scripts/generate-stw-data.mjs <pegleg> <datatables>
  */
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 const sourceDir = process.argv[2]
+const datatablesDir = process.argv[3]
 
-if (!sourceDir) {
+if (!sourceDir || !datatablesDir) {
   console.error(
-    'Usage: node scripts/generate-stw-data.mjs <PegLegResources dir>',
+    'Usage: node scripts/generate-stw-data.mjs <PegLegResources dir> <STW-Datatables dir>',
   )
   process.exit(1)
 }
@@ -199,14 +205,37 @@ const itemRatings = readJson(
   path.join(sourceDir, 'GameAssets', 'ItemRatings.json'),
 ).Default.Tiers
 
-const commit = execFileSync('git', ['-C', sourceDir, 'rev-parse', 'HEAD'], {
-  encoding: 'utf8',
-}).trim()
-const commitDate = execFileSync(
-  'git',
-  ['-C', sourceDir, 'log', '-1', '--format=%cI'],
-  { encoding: 'utf8' },
-).trim()
+// Legacy perk id -> [current perk id, additional perk id?], all lower-case
+const legacyAlterations = Object.fromEntries(
+  Object.entries(
+    readJson(path.join(datatablesDir, 'MigrationMapping.json'))[0].Rows,
+  ).map(([legacyId, row]) => [
+    legacyId.toLowerCase(),
+    [row.NewAlteration, row.AdditionalAlteration]
+      .filter(Boolean)
+      .map((alterationId) => alterationId.toLowerCase()),
+  ]),
+)
+
+Object.entries(legacyAlterations).forEach(([legacyId, targets]) => {
+  targets.forEach((target) => {
+    if (!alterations[target]) {
+      throw new Error(`${legacyId} maps to unknown perk ${target}`)
+    }
+  })
+})
+
+function gitInfo(dir) {
+  const git = (...args) =>
+    execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8' }).trim()
+
+  return {
+    commit: git('rev-parse', 'HEAD'),
+    commitDate: git('log', '-1', '--format=%cI'),
+  }
+}
+
+const { commit, commitDate } = gitInfo(sourceDir)
 
 mkdirSync(outputDir, { recursive: true })
 
@@ -217,6 +246,10 @@ writeFileSync(
 writeFileSync(
   path.join(outputDir, 'alterations.json'),
   `${JSON.stringify(alterations)}\n`,
+)
+writeFileSync(
+  path.join(outputDir, 'legacy-alterations.json'),
+  `${JSON.stringify(legacyAlterations)}\n`,
 )
 writeFileSync(
   path.join(outputDir, 'item-ratings.json'),
@@ -230,6 +263,11 @@ writeFileSync(
       commit,
       commitDate,
       imageBaseUrl: `https://raw.githubusercontent.com/PegLegFN/PegLegResources/${commit}/GameAssets/ExportedImages/`,
+      legacyAlterations: {
+        repository: 'https://github.com/archeruwu/STW-Datatables',
+        file: 'MigrationMapping.json',
+        ...gitInfo(datatablesDir),
+      },
     },
     null,
     2,
@@ -237,5 +275,5 @@ writeFileSync(
 )
 
 console.log(
-  `items: ${Object.keys(items).length}, alterations: ${Object.keys(alterations).length}, descriptions: ${descriptions.length}, commit: ${commit}`,
+  `items: ${Object.keys(items).length}, alterations: ${Object.keys(alterations).length}, legacy alterations: ${Object.keys(legacyAlterations).length}, descriptions: ${descriptions.length}, commit: ${commit}`,
 )

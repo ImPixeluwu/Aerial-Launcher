@@ -155,9 +155,12 @@ descripción, nombre de imagen, estadísticas base, perks y tabla de PL), y las
 imágenes **no se copian**: se cargan desde `raw.githubusercontent.com`, que la
 CSP de Aerial ya permitía.
 
-Generación: `node scripts/generate-stw-data.mjs <copia de PegLegResources>`
+Generación: `node scripts/generate-stw-data.mjs <copia de PegLegResources> <copia de STW-Datatables>`
 lee `GameAssets/NamedItems/{Weapon,Trap,Ingredient,WorldItem,Alteration}.json`
-y `GameAssets/ItemRatings.json`, y escribe `src/data/stw/`. Para actualizar
+y `GameAssets/ItemRatings.json`, más `MigrationMapping.json` de
+archeruwu/STW-Datatables (<https://github.com/archeruwu/STW-Datatables>, sin
+archivo de licencia, datatables extraídas del juego), y escribe
+`src/data/stw/`. Para actualizar
 los datos tras un parche, se vuelve a ejecutar con una copia nueva.
 
 Los datos solo se cargan en el proceso principal; el renderer no los incluye.
@@ -234,18 +237,20 @@ Por eso la ficha muestra **"Estadísticas base"**.
   rellenas desde abajo hasta el tier y del color de la rareza; las perks de
   elemento ("Element: X…") muestran el icono del elemento de Aerial; las perks
   de juego sin tier ocupan la fila entera sin marcador.
-- Perks legacy [INFERIDO, comprobado con una captura del juego]: las armas
-  antiguas guardan ids del sistema de perks anterior, que ya no están en los
-  datos del juego (`aid_att_ranged_damage`, `aid_att_ranged_damage_alt1`,
-  `aid_att_ranged_critdamage_alt2`…). Regla: sin sufijo = tier 1, `_altN` =
-  tier N + 1, con el texto de la perk actual `aid_att_<stat>_t0<tier>` (o
-  `aid_att_<stat>_<ranged|melee|trap>_t0<tier>`). En el juego, `damage`,
-  `damage_alt1` y `critdamage_alt2` se muestran como +10 % Damage, +15 % Damage
-  y +90 % Crit Damage, igual que `aid_att_damage_t01`, `_t02` y
-  `aid_att_critdamage_t03`. `aid_g_<ranged|melee>_<elemento>affliction` se
-  muestra como "Element: <Elemento> and 10% Weapon Damage. Causes Affliction
-  damage for 6 seconds." con el icono del elemento. Un id legacy sin
-  equivalente se muestra con un nombre legible derivado del id.
+- Perks legacy [DATOS]: las armas antiguas guardan ids del sistema de perks
+  anterior (`aid_att_ranged_damage`, `…_alt1`, `aid_g_ranged_energyaffliction`…),
+  que ya no están en los datos actuales. Se traducen con la tabla del propio
+  juego `MigrationMapping` (118 filas: perk legacy → perk actual, a veces con
+  una perk adicional), tomada de archeruwu/STW-Datatables. Ejemplos:
+  `aid_att_ranged_damage` → `aid_att_damage_t01` (+10% Damage),
+  `aid_att_ranged_clipsize_alt1` → `aid_att_magazinesize_t02`,
+  `aid_att_trap_coredamage_t05` → `aid_att_damage_t03`,
+  `aid_g_ranged_energyaffliction` → `aid_ele_energy_t03` +
+  `aid_g_affliction_v2` (se muestra como una sola fila con ambos textos y el
+  icono del elemento). El tier y el color salen de la perk actual.
+  Respaldo [INFERIDO] para ids que no estén en la tabla: sin sufijo = tier 1,
+  `_altN` = tier N + 1, con el texto de la perk actual equivalente; si no hay
+  equivalente, un nombre legible derivado del id.
 - Si un arma no trae perks se indica en la ficha, y la sección
   "Propiedades" muestra los atributos en bruto del perfil para diagnosticarlo.
 Para obtener los valores finales harían falta las tablas de curvas del juego,

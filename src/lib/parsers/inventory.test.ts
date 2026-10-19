@@ -135,11 +135,43 @@ describe('parseInventoryProfile', () => {
       { name: '+15% Damage', tier: 2, rarity: RarityType.Uncommon },
       { name: '+90% Crit Damage', tier: 3, rarity: RarityType.Rare },
       {
-        name: 'Element: Energy and 10% Weapon Damage. Causes Affliction damage for 6 seconds.',
-        tier: null,
+        name: 'Element: Energy and +10% Damage. Causes Affliction damage for 6 seconds.',
         element: 'Energy',
+        legacy: true,
       },
       { name: 'Ranged unknownstat', tier: 4, rarity: RarityType.Epic },
+    ])
+  })
+
+  it('uses the game migration table for renamed and trap legacy perks', () => {
+    const overview = parse({
+      a: item('Trap:tid_floor_spikes_r_t03', 1, {
+        level: 30,
+        alterations: [
+          'Alteration:AID_Att_Trap_CoreDamage_T05',
+          'Alteration:AID_G_Trap_Incendiary',
+        ],
+      }),
+      b: item('Weapon:wid_assault_auto_sr_ore_t05', 1, {
+        level: 50,
+        alterations: [
+          'Alteration:aid_att_ranged_clipsize_alt1',
+          'Alteration:aid_att_ranged_recoil',
+          'Alteration:aid_g_weapon_stun',
+        ],
+      }),
+    })
+    const trap = overview.items.find((entry) => entry.category === 'traps')
+    const weapon = overview.items.find((entry) => entry.category === 'weapons')
+
+    expect(trap?.alterations).toMatchObject([
+      { name: '+20% Damage', tier: 3, rarity: RarityType.Rare },
+      { name: 'Element: Fire and +5% Damage', element: 'Fire' },
+    ])
+    expect(weapon?.alterations).toMatchObject([
+      { name: '+38% Magazine Size', tier: 2 },
+      { name: '+20% Weapon Stability', tier: 1 },
+      { name: 'Stun duration increased by 6s.', tier: null },
     ])
   })
 

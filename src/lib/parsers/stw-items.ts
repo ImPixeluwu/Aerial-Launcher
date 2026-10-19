@@ -10,6 +10,7 @@ import { RarityType } from '../../config/constants/resources'
 import alterationsJson from '../../data/stw/alterations.json'
 import itemRatingsJson from '../../data/stw/item-ratings.json'
 import itemsJson from '../../data/stw/items.json'
+import legacyAlterationsJson from '../../data/stw/legacy-alterations.json'
 import sourceJson from '../../data/stw/source.json'
 
 /**
@@ -41,6 +42,7 @@ const items = itemsJson.items as Record<string, StwItemRecord>
 const descriptions = itemsJson.descriptions as Array<string>
 const alterations = alterationsJson as Record<string, StwAlterationRecord>
 const itemRatings = itemRatingsJson as Record<string, StwRatingTier>
+const legacyAlterations = legacyAlterationsJson as Record<string, Array<string>>
 
 const rarityCodes = new Set<string>(Object.values(RarityType))
 
@@ -110,6 +112,20 @@ function findAlterationRecord(id: string) {
   return alterations[`alteration:${id.toLowerCase()}`]
 }
 
+function parseAlterationTier(id: string) {
+  const tierMatch = id.match(/_t0?([1-9])$/i)
+
+  return tierMatch ? Math.min(Number(tierMatch[1]), 5) : null
+}
+
+function joinSentences(parts: Array<string>) {
+  return parts
+    .map((part, index) =>
+      index < parts.length - 1 && !/[.!?]$/.test(part) ? `${part}.` : part,
+    )
+    .join(' ')
+}
+
 function humanizeAlterationId(id: string) {
   const words = id
     .toLowerCase()
@@ -125,11 +141,38 @@ function humanizeAlterationId(id: string) {
 /**
  * Legacy weapons keep perk ids from the old perk system, which are no
  * longer in the game data: "aid_att_ranged_damage", "..._alt1", ...
- * The base id is tier 1 and "_altN" is tier N + 1, with the same values
- * as the current "aid_att_<stat>_t0X" perks (checked in game: damage,
- * damage_alt1 and critdamage_alt2 show +10%, +15% and +90%).
+ * The game's MigrationMapping table maps each one to a current perk, and
+ * sometimes an additional one (element + affliction perks).
+ */
+function resolveMigratedAlteration(id: string) {
+  const targets = legacyAlterations[`alteration:${id.toLowerCase()}`]
+
+  if (!targets) {
+    return null
+  }
+
+  const records = targets.map((target) => alterations[target])
+  const mainId = targets[0].replace(/^alteration:/, '')
+
+  return {
+    name: joinSentences(records.map((record) => record.n)),
+    tier: parseAlterationTier(mainId),
+    rarity: records[0].r,
+  }
+}
+
+/**
+ * Fallback for legacy ids missing from MigrationMapping: the base id is
+ * tier 1 and "_altN" is tier N + 1, with the same values as the current
+ * "aid_att_<stat>_t0X" perks.
  */
 function resolveLegacyAlteration(id: string) {
+  const migrated = resolveMigratedAlteration(id)
+
+  if (migrated) {
+    return migrated
+  }
+
   const elementAffliction = id.match(
     /^aid_g_(?:ranged|melee)_(energy|fire|nature|physical|water)affliction$/i,
   )
@@ -142,6 +185,7 @@ function resolveLegacyAlteration(id: string) {
     return {
       name: `Element: ${element} and 10% Weapon Damage. Causes Affliction damage for 6 seconds.`,
       tier: null,
+      rarity: undefined,
     }
   }
 
@@ -166,6 +210,7 @@ function resolveLegacyAlteration(id: string) {
   return {
     name: record?.n ?? humanizeAlterationId(id),
     tier,
+    rarity: record?.r,
   }
 }
 
@@ -173,12 +218,7 @@ export function findStwAlteration(alterationId: string): InventoryAlteration {
   const id = alterationId.replace(/^alteration:/i, '')
   const record = findAlterationRecord(id)
   const legacy = record ? null : resolveLegacyAlteration(id)
-  const tierMatch = id.match(/_t0?([1-9])$/i)
-  const tier = legacy
-    ? legacy.tier
-    : tierMatch
-      ? Math.min(Number(tierMatch[1]), 5)
-      : null
+  const tier = legacy ? legacy.tier : parseAlterationTier(id)
   const name = record?.n ?? legacy?.name ?? humanizeAlterationId(id)
   const elementName = name.match(/^Element: (\w+)/)?.[1]
 
@@ -188,7 +228,9 @@ export function findStwAlteration(alterationId: string): InventoryAlteration {
     legacy: !record,
     name,
     tier,
-    rarity: tier ? perkTierRarities[tier - 1] : toRarity(record?.r),
+    rarity: tier
+      ? perkTierRarities[tier - 1]
+      : toRarity(record?.r ?? legacy?.rarity),
     element:
       elements.find((element) => element === elementName) ??
       (/_ele_|_ele$/i.test(id)

@@ -31,6 +31,7 @@ const links = {
   SaseQ: 'https://github.com/SaseQ',
   PRO100KatYT: 'https://github.com/PRO100KatYT',
   PegLegResources: 'https://github.com/PegLegFN/PegLegResources',
+  STWDatatables: 'https://github.com/archeruwu/STW-Datatables',
   eric_guest1: '',
 }
 
@@ -191,6 +192,20 @@ export function ComponentRoute() {
                 <div>
                   Item names, images, perks and power level tables used by
                   the inventory viewer.
+                </div>
+              </li>
+              <li className="item">
+                <a
+                  href={links.STWDatatables}
+                  className="link"
+                  onClick={openURL(links.STWDatatables)}
+                  onAuxClick={whatIsThis()}
+                >
+                  STW-Datatables <ExternalLink className="h-3 w-3" />
+                </a>
+                <div>
+                  Legacy perk migration table used to show perks of legacy
+                  weapons.
                 </div>
               </li>
             </ul>
