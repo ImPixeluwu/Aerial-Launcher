@@ -57,7 +57,8 @@ export function useInventoryData() {
             profileId,
             items: [],
             categoryCounts: {
-              weapons: 0,
+              ranged: 0,
+              melee: 0,
               traps: 0,
               ingredients: 0,
               materials: 0,

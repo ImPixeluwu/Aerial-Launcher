@@ -30,7 +30,8 @@ import {
 } from './stw-items'
 
 const categoryByPrefix: Record<string, InventoryCategory> = {
-  weapon: 'weapons',
+  // Melee weapons are moved to their own category once the type is known
+  weapon: 'ranged',
   trap: 'traps',
   ingredient: 'ingredients',
   worlditem: 'materials',
@@ -128,7 +129,7 @@ export function parseInventoryFilterType(
   id: string,
 ) {
   const patterns =
-    category === 'weapons'
+    category === 'ranged' || category === 'melee'
       ? weaponTypePatterns
       : category === 'traps'
         ? trapTypePatterns
@@ -270,7 +271,8 @@ export function createEmptyInventoryOverview(
     profileId,
     items: [],
     categoryCounts: {
-      weapons: 0,
+      ranged: 0,
+      melee: 0,
       traps: 0,
       ingredients: 0,
       materials: 0,
@@ -294,9 +296,11 @@ export function parseInventoryProfile(
       return
     }
 
-    const { category, id } = splitTemplateId(profileItem.templateId)
+    const { category: templateCategory, id } = splitTemplateId(
+      profileItem.templateId,
+    )
 
-    if (!category) {
+    if (!templateCategory) {
       return
     }
 
@@ -330,9 +334,15 @@ export function parseInventoryProfile(
     const rarity = gameItem?.rarity ?? parseInventoryRarity(id)
     const tier = gameItem?.tier ?? parseInventoryTier(id)
     const filterType =
-      gameItem?.filterType ?? parseInventoryFilterType(category, id)
+      gameItem?.filterType ?? parseInventoryFilterType(templateCategory, id)
+    const category =
+      templateCategory === 'ranged' &&
+      filterType !== null &&
+      meleeFilterTypes.includes(filterType)
+        ? 'melee'
+        : templateCategory
     const fallback = describeItem(category, id, rarity, filterType)
-    const hasPowerLevel = category === 'weapons' || category === 'traps'
+    const hasPowerLevel = category !== 'ingredients' && category !== 'materials'
 
     groups.set(itemKey, {
       itemKey,

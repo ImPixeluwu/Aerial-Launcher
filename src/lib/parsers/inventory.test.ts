@@ -51,7 +51,7 @@ describe('parseInventoryProfile', () => {
     })
 
     expect(overview.items[0]).toMatchObject({
-      category: 'weapons',
+      category: 'melee',
       name: 'Sunbeam Stormblade',
       subType: 'Sword',
       filterType: 'melee_sword',
@@ -155,7 +155,7 @@ describe('parseInventoryProfile', () => {
       }),
     })
     const trap = overview.items.find((entry) => entry.category === 'traps')
-    const weapon = overview.items.find((entry) => entry.category === 'weapons')
+    const weapon = overview.items.find((entry) => entry.category === 'ranged')
 
     expect(trap?.alterations).toMatchObject([
       { name: '+20% Damage', tier: 3, rarity: RarityType.Rare },
@@ -327,7 +327,8 @@ describe('item stats at level', () => {
     expect(stats?.durability).toBe(300)
     expect(stats?.attackTime).toBeCloseTo(0.52, 2)
     expect(stats?.critDamage).toBe(0.5)
-    expect(stats?.critRating).toBe(45)
+    // Approximation: 15% base + 45 Critical Rating summed as +45%
+    expect(stats?.critChance).toBeCloseTo(0.6, 5)
   })
 
   it('applies fire rate, magazine, reload and durability perks', () => {

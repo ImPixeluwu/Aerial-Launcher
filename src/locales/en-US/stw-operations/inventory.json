@@ -7,7 +7,8 @@
     "outpost0": "Storage"
   },
   "category": {
-    "weapons": "Weapons",
+    "ranged": "Ranged",
+    "melee": "Melee",
     "traps": "Traps",
     "ingredients": "Ingredients",
     "materials": "Materials"
@@ -55,11 +56,9 @@
     "clipSize": "Magazine Size",
     "reloadTime": "Reload Time",
     "durability": "Durability",
-    "critRating": "Critical Rating (perks)",
     "ammoCost": "Ammo Cost"
   },
   "no-perks": "This weapon has no perks in its profile data.",
-  "properties": "Properties",
   "close": "Close",
   "stats-title": "Stats (level {{level}})",
   "stats-note": "Damage does not include your F.O.R.T. bonus.",

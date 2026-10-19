@@ -44,14 +44,15 @@ con el token de la cuenta; el visor no envía nada a terceros.
 
 ## 3. Clasificación de objetos
 
-Cuatro categorías, en este orden: `weapons`, `traps`, `ingredients`,
-`materials` [CONFIRMADO, `CATEGORY_ORDER` de GLOW].
+Cinco categorías, en este orden: `ranged`, `melee`, `traps`, `ingredients`,
+`materials`. GLOW usa una sola `weapons` (`CATEGORY_ORDER`); Aerial la
+separa en armas a distancia y cuerpo a cuerpo según el tipo de arma.
 
 Asignación por prefijo de `templateId` [INFERIDO]:
 
 | Prefijo | Categoría |
 |---|---|
-| `Weapon:` | weapons |
+| `Weapon:` | ranged, o melee si el tipo es `melee_*` |
 | `Trap:` | traps |
 | `Ingredient:` | ingredients |
 | `WorldItem:` | materials |
@@ -134,7 +135,7 @@ InventoryItem {
   powerLevel           // PL (§6.2); solo armas y trampas
   quantity, stacks
   alterations: { id, name, tier, rarity, element }[]   // perks, en orden
-  properties: { key, value }[]   // atributos del perfil en bruto
+  properties: { key, value }[]   // atributos del perfil en bruto (no se muestran)
   baseStats            // estadísticas base (§6.3) o null
   imageUrl             // imagen del juego (§6.1) o null
   iconKey              // icono de respaldo de Aerial
@@ -231,8 +232,8 @@ Lo que no coincide (desconocido o fuera del objeto):
   del arma con nivel y perks, con una nota que lo indica.
 - **Probabilidad de crítico con perks**: las perks dan "Critical Rating"; la
   curva `Item.All.CritRatingToCritChance` no reproduce el valor del juego
-  (+45 de rating → +35,5 % frente a +63 % en el juego). Se muestra la
-  probabilidad base y, aparte, el índice de crítico total de las perks.
+  (+45 de rating → +35,5 % frente a +63 % en el juego). Como aproximación,
+  cada punto de rating se suma como +1 % a la probabilidad base.
 - DPS: depende del daño final, no se muestra.
 
 ### 6.4 Perks

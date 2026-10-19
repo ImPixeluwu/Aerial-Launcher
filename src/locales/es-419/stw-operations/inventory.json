@@ -7,7 +7,8 @@
     "outpost0": "Almacén"
   },
   "category": {
-    "weapons": "Armas",
+    "ranged": "A distancia",
+    "melee": "Cuerpo a cuerpo",
     "traps": "Trampas",
     "ingredients": "Ingredientes",
     "materials": "Materiales"
@@ -55,11 +56,9 @@
     "clipSize": "Cargador",
     "reloadTime": "Recarga",
     "durability": "Durabilidad",
-    "critRating": "Índice de crítico (perks)",
     "ammoCost": "Coste de munición"
   },
   "no-perks": "Esta arma no tiene perks en los datos de su perfil.",
-  "properties": "Propiedades",
   "close": "Cerrar",
   "stats-title": "Estadísticas (nivel {{level}})",
   "stats-note": "El daño no incluye tu bonificación del F.O.R.T.",

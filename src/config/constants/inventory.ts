@@ -12,7 +12,8 @@ export const inventoryProfileIds: Array<InventoryProfileId> = [
 ]
 
 export const inventoryCategories: Array<InventoryCategory> = [
-  'weapons',
+  'ranged',
+  'melee',
   'traps',
   'ingredients',
   'materials',

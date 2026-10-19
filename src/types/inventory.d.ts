@@ -3,7 +3,8 @@ import type { RarityType } from '../config/constants/resources'
 export type InventoryProfileId = 'theater0' | 'theater2' | 'outpost0'
 
 export type InventoryCategory =
-  | 'weapons'
+  | 'ranged'
+  | 'melee'
   | 'traps'
   | 'ingredients'
   | 'materials'
@@ -46,10 +47,7 @@ export type InventoryItemBaseStats = Partial<{
  * Stats at the item level with its perks applied. Damage does not include
  * the player's F.O.R.T. bonus, which depends on the account.
  */
-export type InventoryItemStats = InventoryItemBaseStats & {
-  // Sum of "+N Critical Rating" perks; the game converts it to crit chance
-  critRating?: number
-}
+export type InventoryItemStats = InventoryItemBaseStats
 
 /**
  * [attribute, 'a' (additive) | 'm' (multiplicative), value]

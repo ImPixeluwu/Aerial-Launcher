@@ -300,9 +300,15 @@ export function calculateStwStats({
     value === undefined ? undefined : value * factor
 
   const fireRateMultiplier = multiplier('WeaponRateOfFire')
+  // Approximation: the game converts Critical Rating with a curve that is
+  // not in the game data, so each rating point is summed as 1% crit chance
   const critRating = additive('CritRating')
   const stats: InventoryItemStats = {
     ...baseStats,
+    critChance:
+      baseStats.critChance === undefined
+        ? undefined
+        : baseStats.critChance + critRating / 100,
     damage: scale(
       baseStats.damage,
       levelFactor(scaling?.damage) * multiplier('OutgoingAbilityDamage'),
@@ -332,10 +338,6 @@ export function calculateStwStats({
             baseStats.durability *
               multiplier('CharacterItemDurabilityDecayModifier'),
           ),
-  }
-
-  if (critRating > 0) {
-    stats.critRating = critRating
   }
 
   return Object.fromEntries(

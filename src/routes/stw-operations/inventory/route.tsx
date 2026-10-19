@@ -2,28 +2,28 @@ import type {
   InventoryAlteration,
   InventoryItem,
   InventoryItemStats,
-} from '../../../types/inventory'
+} from "../../../types/inventory";
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react";
 
-import { createRoute } from '@tanstack/react-router'
-import { UpdateIcon } from '@radix-ui/react-icons'
-import { ChevronLeft, ChevronRight, Search, Star, X, Zap } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { createRoute } from "@tanstack/react-router";
+import { UpdateIcon } from "@radix-ui/react-icons";
+import { ChevronLeft, ChevronRight, Search, Star, X, Zap } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
-import { RarityType, raritiesColor } from '../../../config/constants/resources'
+import { RarityType, raritiesColor } from "../../../config/constants/resources";
 
-import { Route as RootRoute } from '../../__root'
+import { Route as RootRoute } from "../../__root";
 
-import { HomeBreadcrumb } from '../../../components/navigations/breadcrumb/home'
+import { HomeBreadcrumb } from "../../../components/navigations/breadcrumb/home";
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '../../../components/ui/breadcrumb'
-import { Button } from '../../../components/ui/button'
+} from "../../../components/ui/breadcrumb";
+import { Button } from "../../../components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -31,37 +31,37 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '../../../components/ui/dialog'
-import { Input } from '../../../components/ui/input'
-import { ScrollArea } from '../../../components/ui/scroll-area'
+} from "../../../components/ui/dialog";
+import { Input } from "../../../components/ui/input";
+import { ScrollArea } from "../../../components/ui/scroll-area";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../../components/ui/select'
+} from "../../../components/ui/select";
 import {
   ToggleGroup,
   ToggleGroupItem,
-} from '../../../components/ui/toggle-group'
+} from "../../../components/ui/toggle-group";
 
-import { useInventoryData } from './-hooks'
+import { useInventoryData } from "./-hooks";
 
 import {
   inventoryCategories,
   inventoryProfileIds,
   inventoryRarityOrder,
-} from '../../../config/constants/inventory'
-import { compactNumber } from '../../../lib/parsers/numbers'
-import { assets } from '../../../lib/repository'
-import { cn } from '../../../lib/utils'
+} from "../../../config/constants/inventory";
+import { compactNumber } from "../../../lib/parsers/numbers";
+import { assets } from "../../../lib/repository";
+import { cn } from "../../../lib/utils";
 
 export const Route = createRoute({
   getParentRoute: () => RootRoute,
-  path: '/stw-operations/inventory',
+  path: "/stw-operations/inventory",
   component: () => {
-    const { t } = useTranslation(['sidebar'])
+    const { t } = useTranslation(["sidebar"]);
 
     return (
       <>
@@ -70,12 +70,12 @@ export const Route = createRoute({
             <HomeBreadcrumb />
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>{t('stw-operations.title')}</BreadcrumbPage>
+              <BreadcrumbPage>{t("stw-operations.title")}</BreadcrumbPage>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbPage>
-                {t('stw-operations.options.inventory')}
+                {t("stw-operations.options.inventory")}
               </BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
@@ -83,20 +83,20 @@ export const Route = createRoute({
 
         <Content />
       </>
-    )
+    );
   },
-})
+});
 
 function fallbackIcon(item: InventoryItem) {
-  return assets(item.iconKey) ?? assets('question')
+  return assets(item.iconKey) ?? assets("question");
 }
 
 function formatQuantity(value: number) {
-  return value >= 10_000 ? compactNumber(value) : value.toLocaleString()
+  return value >= 10_000 ? compactNumber(value) : value.toLocaleString();
 }
 
 function Content() {
-  const { t } = useTranslation(['stw-operations'])
+  const { t } = useTranslation(["stw-operations"]);
 
   const {
     categories,
@@ -117,30 +117,30 @@ function Content() {
     setRarities,
     setSearchValue,
     setSelectedItemKey,
-  } = useInventoryData()
+  } = useInventoryData();
 
   if (!selected) {
     return (
       <div className="flex flex-grow items-center justify-center text-muted-foreground">
-        {t('inventory.no-account')}
+        {t("inventory.no-account")}
       </div>
-    )
+    );
   }
 
   const selectedIndex = selectedItem
     ? filteredItems.findIndex((item) => item.itemKey === selectedItem.itemKey)
-    : -1
+    : -1;
   const selectItemAt = (index: number) => {
-    const next = filteredItems[index]
+    const next = filteredItems[index];
 
     if (next) {
-      setSelectedItemKey(next.itemKey)
+      setSelectedItemKey(next.itemKey);
     }
-  }
+  };
 
   const availableRarities = inventoryRarityOrder.filter(
     (rarity) => (overview?.rarityCounts[rarity] ?? 0) > 0,
-  )
+  );
 
   return (
     <div className="flex flex-col flex-grow gap-4">
@@ -155,10 +155,7 @@ function Content() {
           </SelectTrigger>
           <SelectContent>
             {inventoryProfileIds.map((id) => (
-              <SelectItem
-                key={id}
-                value={id}
-              >
+              <SelectItem key={id} value={id}>
                 {t(`inventory.profile.${id}`)}
               </SelectItem>
             ))}
@@ -169,9 +166,9 @@ function Content() {
           variant="outline"
           onClick={loadOverview}
           disabled={isLoading}
-          title={t('inventory.reload')}
+          title={t("inventory.reload")}
         >
-          <UpdateIcon className={cn({ 'animate-spin': isLoading })} />
+          <UpdateIcon className={cn({ "animate-spin": isLoading })} />
         </Button>
       </div>
 
@@ -183,10 +180,7 @@ function Content() {
           onValueChange={(value) => setCategories(value as typeof categories)}
         >
           {inventoryCategories.map((category) => (
-            <ToggleGroupItem
-              key={category}
-              value={category}
-            >
+            <ToggleGroupItem key={category} value={category}>
               {t(`inventory.category.${category}`)}
               <span className="ml-1 text-muted-foreground">
                 {overview?.categoryCounts[category] ?? 0}
@@ -222,7 +216,7 @@ function Content() {
           <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
             className="pl-8"
-            placeholder={t('inventory.search-placeholder')}
+            placeholder={t("inventory.search-placeholder")}
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             spellCheck={false}
@@ -235,17 +229,17 @@ function Content() {
           disabled={!hasActiveFilters}
         >
           <X className="size-4 mr-1" />
-          {t('inventory.clear-filters')}
+          {t("inventory.clear-filters")}
         </Button>
       </div>
 
       <div className="text-sm text-muted-foreground">
-        {t('inventory.items-shown', { count: filteredItems.length })}
+        {t("inventory.items-shown", { count: filteredItems.length })}
       </div>
 
       {overview && !overview.success ? (
         <div className="border-l-4 border-red-400 ml-2 pl-2 text-red-400">
-          {t('inventory.load-failed')}: {overview.error}
+          {t("inventory.load-failed")}: {overview.error}
         </div>
       ) : isLoading && !overview ? (
         <div className="flex flex-grow items-center justify-center">
@@ -253,13 +247,13 @@ function Content() {
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="flex flex-col flex-grow items-center justify-center text-muted-foreground">
-          <p>{t('inventory.no-matches')}</p>
+          <p>{t("inventory.no-matches")}</p>
         </div>
       ) : (
         <div
           className={cn(
-            'grid gap-3 grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))]',
-            { 'opacity-60': isLoading },
+            "grid gap-3 grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))]",
+            { "opacity-60": isLoading },
           )}
         >
           {filteredItems.map((item) => (
@@ -284,77 +278,77 @@ function Content() {
         onNext={() => selectItemAt(selectedIndex + 1)}
       />
     </div>
-  )
+  );
 }
 
 // Perk colors as shown in game: grey, green, blue, purple, gold
 const perkColors: Record<RarityType, string> = {
-  [RarityType.Common]: '#c4c4c4',
-  [RarityType.Uncommon]: '#5fc314',
-  [RarityType.Rare]: '#2fa3f5',
-  [RarityType.Epic]: '#b45cf0',
-  [RarityType.Legendary]: '#f5c242',
-  [RarityType.Mythic]: '#f5c242',
-}
+  [RarityType.Common]: "#c4c4c4",
+  [RarityType.Uncommon]: "#5fc314",
+  [RarityType.Rare]: "#2fa3f5",
+  [RarityType.Epic]: "#b45cf0",
+  [RarityType.Legendary]: "#f5c242",
+  [RarityType.Mythic]: "#f5c242",
+};
 
 function rarityStyle(item: InventoryItem) {
-  const color = raritiesColor[item.rarity ?? RarityType.Common]
+  const color = raritiesColor[item.rarity ?? RarityType.Common];
 
   return {
     borderColor: color,
     background: `linear-gradient(180deg, ${color}33 0%, transparent 70%)`,
-  }
+  };
 }
 
 function ItemImage({
   className,
   item,
 }: {
-  className?: string
-  item: InventoryItem
+  className?: string;
+  item: InventoryItem;
 }) {
-  const [hasError, setHasError] = useState(false)
+  const [hasError, setHasError] = useState(false);
 
   return (
     <img
       src={!hasError && item.imageUrl ? item.imageUrl : fallbackIcon(item)}
       alt=""
-      className={cn('object-contain', className)}
+      className={cn("object-contain", className)}
       draggable={false}
       loading="lazy"
       onError={() => setHasError(true)}
     />
-  )
+  );
 }
 
 function PowerBadge({
   className,
   powerLevel,
 }: {
-  className?: string
-  powerLevel: number
+  className?: string;
+  powerLevel: number;
 }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-0.5 rounded bg-black/70 px-1 text-xs font-semibold',
+        "inline-flex items-center gap-0.5 rounded bg-black/70 px-1 text-xs font-semibold",
         className,
       )}
     >
       <Zap className="size-3 fill-current text-yellow-400" />
       {powerLevel}
     </span>
-  )
+  );
 }
 
 function ItemCard({
   item,
   onSelect,
 }: {
-  item: InventoryItem
-  onSelect: () => void
+  item: InventoryItem;
+  onSelect: () => void;
 }) {
-  const { t } = useTranslation(['stw-operations'])
+  const { t } = useTranslation(["stw-operations"]);
 
   return (
     <button
@@ -362,13 +356,10 @@ function ItemCard({
       className="flex flex-col items-center gap-1 rounded-md border-2 p-2 text-left hover:brightness-125 transition"
       style={rarityStyle(item)}
       onClick={onSelect}
-      title={t('inventory.view-details')}
+      title={t("inventory.view-details")}
     >
       <div className="relative w-full">
-        <ItemImage
-          item={item}
-          className="mx-auto size-16"
-        />
+        <ItemImage item={item} className="mx-auto size-16" />
         {item.quantity > 1 && (
           <span className="absolute bottom-0 right-0 rounded bg-black/70 px-1 text-xs">
             x{formatQuantity(item.quantity)}
@@ -386,20 +377,17 @@ function ItemCard({
         {item.name}
       </span>
     </button>
-  )
+  );
 }
 
 function TierStars({ tier }: { tier: number }) {
   return (
     <span className="flex gap-0.5 text-yellow-400">
       {Array.from({ length: tier }, (_, index) => (
-        <Star
-          key={index}
-          className="size-3 fill-current"
-        />
+        <Star key={index} className="size-3 fill-current" />
       ))}
     </span>
-  )
+  );
 }
 
 function PerkTierBars({ color, tier }: { color: string; tier: number }) {
@@ -413,25 +401,22 @@ function PerkTierBars({ color, tier }: { color: string; tier: number }) {
         />
       ))}
     </span>
-  )
+  );
 }
 
 function PerkRow({ alteration }: { alteration: InventoryAlteration }) {
-  const color = alteration.rarity ? perkColors[alteration.rarity] : undefined
-  const elementIcon = alteration.element ? assets(alteration.element) : null
-  const hasMarker = alteration.tier !== null || elementIcon
+  const color = alteration.rarity ? perkColors[alteration.rarity] : undefined;
+  const elementIcon = alteration.element ? assets(alteration.element) : null;
+  const hasMarker = alteration.tier !== null || elementIcon;
 
   return (
-    <li
-      className="flex min-h-10 items-stretch gap-0.5"
-      title={alteration.id}
-    >
+    <li className="flex min-h-10 items-stretch gap-0.5" title={alteration.id}>
       {hasMarker && (
         <span className="flex w-10 shrink-0 items-center justify-center bg-secondary/80">
           {elementIcon ? (
             <img
               src={elementIcon}
-              alt={alteration.element ?? ''}
+              alt={alteration.element ?? ""}
               className="size-7 object-contain"
               draggable={false}
             />
@@ -447,41 +432,38 @@ function PerkRow({ alteration }: { alteration: InventoryAlteration }) {
         {alteration.name}
       </span>
     </li>
-  )
+  );
 }
 
 function formatStat(key: keyof InventoryItemStats, value: number) {
   switch (key) {
-    case 'critRating':
-      return `+${value}`
-    case 'critChance':
-    case 'critDamage':
-      return `${Math.round(value * 1000) / 10}%`
-    case 'attackTime':
-    case 'fireDelay':
-    case 'reloadTime':
-      return `${value.toFixed(2)} s`
-    case 'fireRate':
-      return value.toFixed(2)
+    case "critChance":
+    case "critDamage":
+      return `${Math.round(value * 1000) / 10}%`;
+    case "attackTime":
+    case "fireDelay":
+    case "reloadTime":
+      return `${value.toFixed(2)} s`;
+    case "fireRate":
+      return value.toFixed(2);
     default:
-      return value.toLocaleString(undefined, { maximumFractionDigits: 1 })
+      return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
   }
 }
 
 const statOrder: Array<keyof InventoryItemStats> = [
-  'damage',
-  'critChance',
-  'critRating',
-  'critDamage',
-  'attackTime',
-  'fireRate',
-  'fireDelay',
-  'clipSize',
-  'reloadTime',
-  'ammoCost',
-  'durability',
-  'impact',
-]
+  "damage",
+  "critChance",
+  "critDamage",
+  "attackTime",
+  "fireRate",
+  "fireDelay",
+  "clipSize",
+  "reloadTime",
+  "ammoCost",
+  "durability",
+  "impact",
+];
 
 function ItemDetail({
   item,
@@ -490,61 +472,61 @@ function ItemDetail({
   onNext,
   onPrevious,
 }: {
-  item: InventoryItem | null
-  position: { index: number; total: number } | null
-  onClose: () => void
-  onNext: () => void
-  onPrevious: () => void
+  item: InventoryItem | null;
+  position: { index: number; total: number } | null;
+  onClose: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
 }) {
-  const { t } = useTranslation(['stw-operations'])
-  const hasPrevious = position !== null && position.index > 0
-  const hasNext = position !== null && position.index < position.total - 1
+  const { t } = useTranslation(["stw-operations"]);
+  const hasPrevious = position !== null && position.index > 0;
+  const hasNext = position !== null && position.index < position.total - 1;
 
   useEffect(() => {
     if (!item) {
-      return
+      return;
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowLeft' && hasPrevious) {
-        event.preventDefault()
-        onPrevious()
-      } else if (event.key === 'ArrowRight' && hasNext) {
-        event.preventDefault()
-        onNext()
+      if (event.key === "ArrowLeft" && hasPrevious) {
+        event.preventDefault();
+        onPrevious();
+      } else if (event.key === "ArrowRight" && hasNext) {
+        event.preventDefault();
+        onNext();
       }
-    }
+    };
 
-    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener("keydown", handleKeyDown);
 
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [item, hasPrevious, hasNext, onPrevious, onNext])
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [item, hasPrevious, hasNext, onPrevious, onNext]);
 
   const stats = item?.stats
     ? statOrder.flatMap((key) => {
-        const value = item.stats?.[key]
+        const value = item.stats?.[key];
 
-        return typeof value === 'number' ? [[key, value] as const] : []
+        return typeof value === "number" ? [[key, value] as const] : [];
       })
-    : []
+    : [];
   const extraRows = item
     ? [
-        [t('inventory.prop.quantity'), item.quantity.toLocaleString()],
-        [t('inventory.prop.stacks'), String(item.stacks)],
+        [t("inventory.prop.quantity"), item.quantity.toLocaleString()],
+        [t("inventory.prop.stacks"), String(item.stacks)],
         [
-          t('inventory.prop.material'),
-          item.material ? t(`inventory.material.${item.material}`) : '—',
+          t("inventory.prop.material"),
+          item.material ? t(`inventory.material.${item.material}`) : "—",
         ],
-        [t('inventory.prop.template'), item.templateId],
+        [t("inventory.prop.template"), item.templateId],
       ]
-    : []
+    : [];
 
   return (
     <Dialog
       open={item !== null}
       onOpenChange={(open) => {
         if (!open) {
-          onClose()
+          onClose();
         }
       }}
     >
@@ -560,8 +542,8 @@ function ItemDetail({
               className="flex size-10 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
               onClick={onPrevious}
               disabled={!hasPrevious}
-              aria-label={t('inventory.previous')}
-              title={t('inventory.previous')}
+              aria-label={t("inventory.previous")}
+              title={t("inventory.previous")}
             >
               <ChevronLeft className="size-6" />
             </button>
@@ -573,8 +555,8 @@ function ItemDetail({
               className="flex size-10 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
               onClick={onNext}
               disabled={!hasNext}
-              aria-label={t('inventory.next')}
-              title={t('inventory.next')}
+              aria-label={t("inventory.next")}
+              title={t("inventory.next")}
             >
               <ChevronRight className="size-6" />
             </button>
@@ -582,7 +564,7 @@ function ItemDetail({
         )}
         <DialogClose
           className="absolute right-2 top-2 z-10 flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={t('inventory.close')}
+          aria-label={t("inventory.close")}
         >
           <X className="size-6" />
         </DialogClose>
@@ -609,7 +591,7 @@ function ItemDetail({
                         item.subType,
                       ]
                         .filter(Boolean)
-                        .join(' | ')}
+                        .join(" | ")}
                     </DialogDescription>
                     <DialogTitle className="text-xl">{item.name}</DialogTitle>
                     <div className="flex flex-wrap items-center gap-3 text-sm">
@@ -623,11 +605,11 @@ function ItemDetail({
                       {item.level !== null && (
                         <span>
                           {item.maxLevel !== null
-                            ? t('inventory.level-of', {
+                            ? t("inventory.level-of", {
                                 level: item.level,
                                 max: item.maxLevel,
                               })
-                            : t('inventory.level-short', { level: item.level })}
+                            : t("inventory.level-short", { level: item.level })}
                         </span>
                       )}
                     </div>
@@ -640,7 +622,7 @@ function ItemDetail({
                   {stats.length > 0 && (
                     <section className="text-sm">
                       <h3 className="mb-2 font-semibold">
-                        {t('inventory.stats-title', {
+                        {t("inventory.stats-title", {
                           level: item.level ?? 1,
                         })}
                       </h3>
@@ -659,9 +641,9 @@ function ItemDetail({
                           </div>
                         ))}
                       </dl>
-                      {stats.some(([key]) => key === 'damage') && (
+                      {stats.some(([key]) => key === "damage") && (
                         <p className="mt-1.5 text-xs text-muted-foreground">
-                          {t('inventory.stats-note')}
+                          {t("inventory.stats-note")}
                         </p>
                       )}
                     </section>
@@ -669,10 +651,7 @@ function ItemDetail({
 
                   <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
                     {extraRows.map(([label, value]) => (
-                      <div
-                        key={label}
-                        className="contents"
-                      >
+                      <div key={label} className="contents">
                         <dt className="text-muted-foreground">{label}</dt>
                         <dd className="break-all">{value}</dd>
                       </div>
@@ -684,7 +663,7 @@ function ItemDetail({
                   {item.alterations.length > 0 ? (
                     <section className="text-sm">
                       <h3 className="mb-2 font-semibold">
-                        {t('inventory.alterations')}
+                        {t("inventory.alterations")}
                       </h3>
                       <ul className="flex flex-col gap-1 overflow-hidden rounded-md">
                         {item.alterations.map((alteration, index) => (
@@ -696,9 +675,10 @@ function ItemDetail({
                       </ul>
                     </section>
                   ) : (
-                    item.category === 'weapons' && (
+                    (item.category === "ranged" ||
+                      item.category === "melee") && (
                       <p className="text-sm text-muted-foreground">
-                        {t('inventory.no-perks')}
+                        {t("inventory.no-perks")}
                       </p>
                     )
                   )}
@@ -708,25 +688,6 @@ function ItemDetail({
                       {item.description}
                     </p>
                   )}
-
-                  {item.properties.length > 0 && (
-                    <details className="text-sm">
-                      <summary className="cursor-pointer font-semibold">
-                        {t('inventory.properties')}
-                      </summary>
-                      <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-xs">
-                        {item.properties.map(({ key, value }) => (
-                          <div
-                            key={key}
-                            className="contents"
-                          >
-                            <dt className="text-muted-foreground">{key}</dt>
-                            <dd className="break-all font-mono">{value}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </details>
-                  )}
                 </div>
               </div>
             </div>
@@ -734,5 +695,5 @@ function ItemDetail({
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }
