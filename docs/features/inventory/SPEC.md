@@ -262,11 +262,7 @@ Lo que no coincide (desconocido o fuera del objeto):
   Respaldo [INFERIDO] para ids que no estén en la tabla: sin sufijo = tier 1,
   `_altN` = tier N + 1, con el texto de la perk actual equivalente; si no hay
   equivalente, un nombre legible derivado del id.
-- Si un arma no trae perks se indica en la ficha, y la sección
-  "Propiedades" muestra los atributos en bruto del perfil para diagnosticarlo.
-Para obtener los valores finales harían falta las tablas de curvas del juego,
-que no están en PegLegResources (se podrían extraer con FModel de una
-instalación propia).
+- Si un arma no trae perks, la ficha lo indica.
 
 ## 7. Interfaz
 
@@ -288,8 +284,8 @@ instalación propia).
 - Al pulsar una tarjeta, ficha de detalle al estilo del juego [DECISIÓN]:
   cabecera con rareza | categoría | subtipo, nombre, PL, estrellas y
   "NV x / máx"; estadísticas al nivel del objeto (§6.3); perks (§6.4); descripción;
-  cantidad, stacks, material, `templateId` y propiedades en bruto
-  (plegadas).
+  cantidad, stacks, material y `templateId`. Los atributos en bruto del perfil
+  no se muestran.
 - Flechas anterior/siguiente en la ficha (y teclas ← →) para recorrer los
   objetos de la lista filtrada, con la posición "N / total" [DECISIÓN]. Escape o clic fuera la cierra
   [CONFIRMADO].
@@ -322,7 +318,8 @@ instalación propia).
    `quantity = 800` y `stacks = 2`.
 2. `Weapon:wid_edged_sword_medium_laser_sr_crystal_t05` a nivel 50 →
    "Sunbeam Stormblade", `Sword`, `sr`, tier 5, PL **130**, NV 50/50, velocidad
-   de ataque 0,5185 s, crítico base 15 % y 50 % (captura del juego).
+   de ataque 0,5185 s, categoría `melee`; con +45 de Critical Rating en perks,
+   probabilidad de crítico 60 % (aproximación de §6.3; el juego muestra 78 %).
 3. Las perks del perfil se resuelven a su texto y tier
    (`aid_att_damage_t01` → "+10% Damage", tier 1).
 4. `Trap:tid_floor_spikes_r_t03` → "Retractable Floor Spikes", `trap_floor`,
