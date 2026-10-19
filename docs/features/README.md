@@ -149,3 +149,12 @@ Método, sin ejecutar nada de la muestra:
 **No replicar** nada que dependa del servidor de GLOW (`glowhaven.site`). Por
 ejemplo, el visor remoto de la Homebase (`/api/glow/homebase-viewer/v1/*`) o
 los loadouts de la comunidad (`/api/glow/community-loadouts`).
+
+## 8. Mensaje para abrir una sesión nueva
+
+Basta con algo así, cambiando la función:
+
+> Repositorio ImPixeluwu/aerial-launcher, rama `claude/trusting-brown-eh073r`.
+> Lee `docs/features/README.md` y `docs/features/schematics/NOTES.md`.
+> Resuelve conmigo las decisiones del final de NOTES, escribe el SPEC, súbelo
+> y después implementa siguiendo la guía.
