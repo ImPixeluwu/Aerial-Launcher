@@ -1,0 +1,67 @@
+{
+  "no-account": "Selecciona una cuenta para ver su inventario.",
+  "reload": "Recargar",
+  "profile": {
+    "theater0": "Mochila de Campaña",
+    "theater2": "Mochila de Ventures",
+    "outpost0": "Almacén"
+  },
+  "category": {
+    "ranged": "A distancia",
+    "melee": "Cuerpo a cuerpo",
+    "traps": "Trampas",
+    "ingredients": "Ingredientes",
+    "materials": "Materiales"
+  },
+  "rarity": {
+    "c": "Común",
+    "uc": "Poco común",
+    "r": "Raro",
+    "vr": "Épico",
+    "sr": "Legendario",
+    "ur": "Mítico"
+  },
+  "material": {
+    "ore": "Mineral",
+    "crystal": "Cristal"
+  },
+  "search-placeholder": "Buscar por nombre o ID de plantilla…",
+  "clear-filters": "Limpiar filtros",
+  "items-shown_one": "{{count}} objeto mostrado",
+  "items-shown_other": "{{count}} objetos mostrados",
+  "load-failed": "No se pudo cargar el inventario",
+  "no-matches": "Ningún objeto coincide con los filtros.",
+  "view-details": "Ver detalles",
+  "level-short": "Nv {{level}}",
+  "alterations": "Perks",
+  "prop": {
+    "category": "Categoría",
+    "rarity": "Rareza",
+    "quantity": "Cantidad",
+    "stacks": "Stacks",
+    "level": "Nivel",
+    "tier": "Tier",
+    "material": "Material",
+    "template": "ID de plantilla"
+  },
+  "level-of": "NV {{level}} / {{max}}",
+  "stat": {
+    "damage": "Daño",
+    "impact": "Impacto",
+    "critChance": "Probabilidad de crítico",
+    "critDamage": "Daño crítico",
+    "attackTime": "Velocidad de ataque",
+    "fireRate": "Cadencia",
+    "fireDelay": "Retardo de disparo",
+    "clipSize": "Cargador",
+    "reloadTime": "Recarga",
+    "durability": "Durabilidad",
+    "ammoCost": "Coste de munición"
+  },
+  "no-perks": "Esta arma no tiene perks en los datos de su perfil.",
+  "close": "Cerrar",
+  "stats-title": "Estadísticas (nivel {{level}})",
+  "stats-note": "El daño no incluye tu bonificación del F.O.R.T.",
+  "previous": "Objeto anterior",
+  "next": "Objeto siguiente"
+}

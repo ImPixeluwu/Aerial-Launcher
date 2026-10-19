@@ -1,0 +1,67 @@
+{
+  "no-account": "Select an account to view its inventory.",
+  "reload": "Reload",
+  "profile": {
+    "theater0": "Campaign backpack",
+    "theater2": "Ventures backpack",
+    "outpost0": "Storage"
+  },
+  "category": {
+    "ranged": "Ranged",
+    "melee": "Melee",
+    "traps": "Traps",
+    "ingredients": "Ingredients",
+    "materials": "Materials"
+  },
+  "rarity": {
+    "c": "Common",
+    "uc": "Uncommon",
+    "r": "Rare",
+    "vr": "Epic",
+    "sr": "Legendary",
+    "ur": "Mythic"
+  },
+  "material": {
+    "ore": "Ore",
+    "crystal": "Crystal"
+  },
+  "search-placeholder": "Search by name or template ID…",
+  "clear-filters": "Clear filters",
+  "items-shown_one": "{{count}} item shown",
+  "items-shown_other": "{{count}} items shown",
+  "load-failed": "Could not load the inventory",
+  "no-matches": "No items match your filters.",
+  "view-details": "View details",
+  "level-short": "Lv {{level}}",
+  "alterations": "Perks",
+  "prop": {
+    "category": "Category",
+    "rarity": "Rarity",
+    "quantity": "Quantity",
+    "stacks": "Stacks",
+    "level": "Level",
+    "tier": "Tier",
+    "material": "Material",
+    "template": "Template ID"
+  },
+  "level-of": "LV {{level}} / {{max}}",
+  "stat": {
+    "damage": "Damage",
+    "impact": "Impact",
+    "critChance": "Critical Hit Chance",
+    "critDamage": "Critical Hit Damage",
+    "attackTime": "Attack Speed",
+    "fireRate": "Fire Rate",
+    "fireDelay": "Fire Delay",
+    "clipSize": "Magazine Size",
+    "reloadTime": "Reload Time",
+    "durability": "Durability",
+    "ammoCost": "Ammo Cost"
+  },
+  "no-perks": "This weapon has no perks in its profile data.",
+  "close": "Close",
+  "stats-title": "Stats (level {{level}})",
+  "stats-note": "Damage does not include your F.O.R.T. bonus.",
+  "previous": "Previous item",
+  "next": "Next item"
+}
