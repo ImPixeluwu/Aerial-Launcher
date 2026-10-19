@@ -325,7 +325,6 @@ export function parseInventoryProfile(
     }
 
     const gameItem = findStwItem(profileItem.templateId)
-    const alterations = alterationIds.map(findStwAlteration)
     const rarity = gameItem?.rarity ?? parseInventoryRarity(id)
     const tier = gameItem?.tier ?? parseInventoryTier(id)
     const filterType =
@@ -351,8 +350,7 @@ export function parseInventoryProfile(
         : null,
       quantity,
       stacks: 1,
-      alterations,
-      hasLegacyPerks: alterations.some((alteration) => alteration.legacy),
+      alterations: alterationIds.map(findStwAlteration),
       baseStats: gameItem?.baseStats ?? null,
       properties: readProperties(profileItem.attributes),
       iconKey: fallback.iconKey,

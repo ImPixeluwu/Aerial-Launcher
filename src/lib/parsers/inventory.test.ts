@@ -71,8 +71,6 @@ describe('parseInventoryProfile', () => {
     expect(overview.items[0].alterations).toEqual([
       {
         id: 'aid_att_damage_t01',
-        rawId: 'Alteration:aid_att_damage_t01',
-        legacy: false,
         name: '+10% Damage',
         tier: 1,
         rarity: RarityType.Common,
@@ -80,8 +78,6 @@ describe('parseInventoryProfile', () => {
       },
       {
         id: 'aid_att_critchance_t02',
-        rawId: 'Alteration:aid_att_critchance_t02',
-        legacy: false,
         name: '+15 Critical Rating',
         tier: 2,
         rarity: RarityType.Uncommon,
@@ -89,8 +85,6 @@ describe('parseInventoryProfile', () => {
       },
       {
         id: 'aid_g_melee_affliction_v2',
-        rawId: 'Alteration:aid_g_melee_affliction_v2',
-        legacy: false,
         name: '+10% Weapon Damage. Causes Affliction damage for 6 seconds.',
         tier: null,
         rarity: RarityType.Common,
@@ -137,7 +131,6 @@ describe('parseInventoryProfile', () => {
       {
         name: 'Element: Energy and +10% Damage. Causes Affliction damage for 6 seconds.',
         element: 'Energy',
-        legacy: true,
       },
       { name: 'Ranged unknownstat', tier: 4, rarity: RarityType.Epic },
     ])
@@ -174,35 +167,6 @@ describe('parseInventoryProfile', () => {
       { name: 'Stun duration increased by 6s.', tier: null },
     ])
   })
-
-  it('flags legacy perks and items that have them', () => {
-    const overview = parse({
-      a: item('Weapon:wid_assault_auto_sr_ore_t05', 1, {
-        level: 50,
-        alterations: [
-          'Alteration:aid_att_ranged_damage',
-          'Alteration:aid_att_damage_t02',
-        ],
-      }),
-      b: item('Weapon:wid_shotgun_standard_r_ore_t02', 1, {
-        alterations: ['Alteration:aid_att_damage_t01'],
-      }),
-    })
-    const legacyWeapon = overview.items.find((entry) =>
-      entry.templateId.includes('assault'),
-    )
-    const modernWeapon = overview.items.find((entry) =>
-      entry.templateId.includes('shotgun'),
-    )
-
-    expect(legacyWeapon?.hasLegacyPerks).toBe(true)
-    expect(legacyWeapon?.alterations).toMatchObject([
-      { rawId: 'Alteration:aid_att_ranged_damage', legacy: true },
-      { rawId: 'Alteration:aid_att_damage_t02', legacy: false },
-    ])
-    expect(modernWeapon?.hasLegacyPerks).toBe(false)
-  })
-
   it('reads perks from alterationDefinitions when alterations is missing', () => {
     const overview = parse({
       a: item('Weapon:wid_assault_auto_sr_ore_t05', 1, {

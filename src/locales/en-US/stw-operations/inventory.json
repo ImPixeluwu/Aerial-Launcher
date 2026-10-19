@@ -59,7 +59,5 @@
   },
   "no-perks": "This weapon has no perks in its profile data.",
   "properties": "Properties",
-  "close": "Close",
-  "legacy-only": "Legacy only",
-  "legacy-only-hint": "Show only items with legacy perks (test)"
+  "close": "Close"
 }

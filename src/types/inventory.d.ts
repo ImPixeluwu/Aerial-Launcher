@@ -50,10 +50,6 @@ export type InventoryElement =
 
 export type InventoryAlteration = {
   id: string
-  // Perk id exactly as it comes in the profile
-  rawId: string
-  // Not in the current game data (old perk system)
-  legacy: boolean
   name: string
   tier: number | null
   rarity: RarityType | null
@@ -77,7 +73,6 @@ export type InventoryItem = {
   quantity: number
   stacks: number
   alterations: Array<InventoryAlteration>
-  hasLegacyPerks: boolean
   baseStats: InventoryItemBaseStats | null
   properties: Array<{ key: string; value: string }>
   iconKey: string

@@ -224,8 +224,6 @@ export function findStwAlteration(alterationId: string): InventoryAlteration {
 
   return {
     id,
-    rawId: alterationId,
-    legacy: !record,
     name,
     tier,
     rarity: tier

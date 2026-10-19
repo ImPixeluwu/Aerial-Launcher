@@ -34,7 +34,6 @@ import {
 } from '../../../components/ui/dialog'
 import { Input } from '../../../components/ui/input'
 import { ScrollArea } from '../../../components/ui/scroll-area'
-import { Toggle } from '../../../components/ui/toggle'
 import {
   Select,
   SelectContent,
@@ -104,8 +103,6 @@ function Content() {
     filteredItems,
     hasActiveFilters,
     isLoading,
-    legacyCount,
-    legacyOnly,
     overview,
     profileId,
     rarities,
@@ -116,7 +113,6 @@ function Content() {
     loadOverview,
     resetFilters,
     setCategories,
-    setLegacyOnly,
     setProfileId,
     setRarities,
     setSearchValue,
@@ -210,16 +206,6 @@ function Content() {
             ))}
           </ToggleGroup>
         )}
-
-        <Toggle
-          variant="outline"
-          pressed={legacyOnly}
-          onPressedChange={setLegacyOnly}
-          title={t('inventory.legacy-only-hint')}
-        >
-          {t('inventory.legacy-only')}
-          <span className="ml-1 text-muted-foreground">{legacyCount}</span>
-        </Toggle>
 
         <div className="relative flex-grow min-w-48">
           <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
@@ -439,17 +425,8 @@ function PerkRow({ alteration }: { alteration: InventoryAlteration }) {
           )}
         </span>
       )}
-      <span className="flex flex-grow flex-col justify-center bg-secondary/50 px-2.5 py-1.5">
-        <span>{alteration.name}</span>
-        <span
-          className={cn('select-all break-all font-mono text-xs', {
-            'text-amber-400': alteration.legacy,
-            'text-muted-foreground': !alteration.legacy,
-          })}
-        >
-          {alteration.legacy ? 'LEGACY · ' : ''}
-          {alteration.rawId}
-        </span>
+      <span className="flex flex-grow items-center bg-secondary/50 px-2.5 py-1.5">
+        {alteration.name}
       </span>
     </li>
   )
