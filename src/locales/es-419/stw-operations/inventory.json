@@ -59,5 +59,7 @@
   },
   "no-perks": "Esta arma no tiene perks en los datos de su perfil.",
   "properties": "Propiedades",
-  "close": "Cerrar"
+  "close": "Cerrar",
+  "legacy-only": "Solo legacy",
+  "legacy-only-hint": "Mostrar solo objetos con perks legacy (prueba)"
 }

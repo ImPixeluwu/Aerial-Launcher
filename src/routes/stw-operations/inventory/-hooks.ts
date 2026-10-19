@@ -19,6 +19,7 @@ export function useInventoryData() {
   const [categories, setCategories] = useState<Array<InventoryCategory>>([])
   const [rarities, setRarities] = useState<Array<RarityType>>([])
   const [searchValue, setSearchValue] = useState('')
+  const [legacyOnly, setLegacyOnly] = useState(false)
   const [selectedItemKey, setSelectedItemKey] = useState<string | null>(null)
   const requestId = useRef(0)
 
@@ -28,6 +29,7 @@ export function useInventoryData() {
     setCategories([])
     setRarities([])
     setSearchValue('')
+    setLegacyOnly(false)
   }
 
   const loadOverview = () => {
@@ -97,29 +99,45 @@ export function useInventoryData() {
         return false
       }
 
+      if (legacyOnly && !item.hasLegacyPerks) {
+        return false
+      }
+
       if (
         needle &&
-        !`${item.name} ${item.templateId}`.toLowerCase().includes(needle)
+        ![
+          item.name,
+          item.templateId,
+          ...item.alterations.map((perk) => perk.rawId),
+        ]
+          .join(' ')
+          .toLowerCase()
+          .includes(needle)
       ) {
         return false
       }
 
       return true
     })
-  }, [overview, categories, rarities, debouncedSearchValue])
+  }, [overview, categories, rarities, legacyOnly, debouncedSearchValue])
 
   const selectedItem =
     overview?.items.find((item) => item.itemKey === selectedItemKey) ?? null
   const hasActiveFilters =
     categories.length > 0 ||
     rarities.length > 0 ||
+    legacyOnly ||
     searchValue.trim().length > 0
+  const legacyCount =
+    overview?.items.filter((item) => item.hasLegacyPerks).length ?? 0
 
   return {
     categories,
     filteredItems,
     hasActiveFilters,
     isLoading,
+    legacyCount,
+    legacyOnly,
     overview,
     profileId,
     rarities,
@@ -130,6 +148,7 @@ export function useInventoryData() {
     loadOverview,
     resetFilters,
     setCategories,
+    setLegacyOnly,
     setProfileId,
     setRarities,
     setSearchValue,
