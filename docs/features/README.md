@@ -8,7 +8,13 @@ función se desarrolla en su propia sesión; empieza leyendo esto y luego el
 
 - Repositorio: `ImPixeluwu/aerial-launcher`, fork de `FIZZCD/Aerial-Launcher`
   (base 1.12.4). Remotos: `origin` (el fork) y `fizzcd` (upstream).
-- Rama de trabajo: `claude/trusting-brown-eh073r`. Aún no hay PR abierto.
+- **Documentación (esta rama):** `notes/glow-features`. Nunca se fusiona en
+  `main`, para que el código público no contenga notas sobre GLOW.
+- **Código:**
+  - Cada función va en su propia rama, creada desde `main`.
+  - Cada rama se cierra con un PR que solo incluye código.
+  - Se fusiona con "Squash and merge".
+- **Inventario:** PR ImPixeluwu/Aerial-Launcher#1.
 - Objetivo: reimplementar en Aerial funciones que tiene GLOW Launcher 5.0.4
   (código cerrado, app Tauri) a partir de su **comportamiento**.
 
@@ -20,7 +26,7 @@ función se desarrolla en su propia sesión; empieza leyendo esto y luego el
 2. **GLOW nunca se ejecuta.** Si hace falta mirar algo más, solo análisis
    estático (ver §7).
 3. **Spec primero.** Cada función tiene `docs/features/<función>/SPEC.md`,
-   escrito y subido antes del código, con cada afirmación marcada como
+   escrito y subido **a esta rama** antes del código, con cada afirmación marcada como
    [CONFIRMADO], [INFERIDO], [DECISIÓN] o [DATOS]. Modelo:
    `docs/features/inventory/SPEC.md`.
 4. Imágenes y datos del juego: solo de fuentes públicas (§5), con el commit
@@ -154,7 +160,8 @@ los loadouts de la comunidad (`/api/glow/community-loadouts`).
 
 Basta con algo así, cambiando la función:
 
-> Repositorio ImPixeluwu/aerial-launcher, rama `claude/trusting-brown-eh073r`.
-> Lee `docs/features/README.md` y `docs/features/schematics/NOTES.md`.
-> Resuelve conmigo las decisiones del final de NOTES, escribe el SPEC, súbelo
-> y después implementa siguiendo la guía.
+> Repositorio ImPixeluwu/aerial-launcher. Lee `docs/features/README.md` y
+> `docs/features/schematics/NOTES.md` de la rama `notes/glow-features`.
+> Resuelve conmigo las decisiones del final de NOTES, escribe el SPEC y
+> súbelo a esa rama. Después implementa siguiendo la guía, en una rama nueva
+> creada desde `main`, sin carpeta `docs/features`.
