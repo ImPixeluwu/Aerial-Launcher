@@ -123,8 +123,6 @@ export enum ElectronAPIEventKeys {
   SetHombaseName = 'homebase-name:set',
   HomebaseNameNotification = 'homebase-name:notification',
 
-  InventoryGetOverview = 'inventory:get-overview',
-
   XPBoostsAccountProfileRequest = 'xpboosts:account-profile:request',
   XPBoostsAccountProfileResponse = 'xpboosts:account-profile:response',
   XPBoostsSearchUser = 'xpboosts:search:user',

@@ -33,8 +33,5 @@ export default defineConfig((env) => {
       preserveSymlinks: true,
     },
     clearScreen: false,
-    server: process.env.VITE_DEV_PORT
-      ? { port: Number(process.env.VITE_DEV_PORT), strictPort: true }
-      : undefined,
   } as UserConfig
 })

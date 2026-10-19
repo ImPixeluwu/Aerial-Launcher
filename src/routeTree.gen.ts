@@ -19,7 +19,6 @@ import { Route as StwOperationsUnlockRouteImport } from './routes/stw-operations
 import { Route as StwOperationsTaxiServiceRouteImport } from './routes/stw-operations/taxi-service/route'
 import { Route as StwOperationsSaveQuestsRouteImport } from './routes/stw-operations/save-quests/route'
 import { Route as StwOperationsPartyRouteImport } from './routes/stw-operations/party/route'
-import { Route as StwOperationsInventoryRouteImport } from './routes/stw-operations/inventory/route'
 import { Route as StwOperationsHomebaseNameRouteImport } from './routes/stw-operations/homebase-name/route'
 import { Route as StwOperationsDailyQuestsRouteImport } from './routes/stw-operations/daily-quests/route'
 import { Route as StwOperationsAutomationRouteImport } from './routes/stw-operations/automation/route'
@@ -80,12 +79,6 @@ const StwOperationsPartyRouteRoute = StwOperationsPartyRouteImport.update({
   path: '/stw-operations/party',
   getParentRoute: () => rootRoute,
 } as any)
-
-const StwOperationsInventoryRouteRoute =
-  StwOperationsInventoryRouteImport.update({
-    path: '/stw-operations/inventory',
-    getParentRoute: () => rootRoute,
-  } as any)
 
 const StwOperationsHomebaseNameRouteRoute =
   StwOperationsHomebaseNameRouteImport.update({
@@ -234,10 +227,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsHomebaseNameRouteImport
       parentRoute: typeof rootRoute
     }
-    '/stw-operations/inventory': {
-      preLoaderRoute: typeof StwOperationsInventoryRouteImport
-      parentRoute: typeof rootRoute
-    }
     '/stw-operations/party': {
       preLoaderRoute: typeof StwOperationsPartyRouteImport
       parentRoute: typeof rootRoute
@@ -287,7 +276,6 @@ export const routeTree = rootRoute.addChildren([
   StwOperationsAutomationRouteRoute,
   StwOperationsDailyQuestsRouteRoute,
   StwOperationsHomebaseNameRouteRoute,
-  StwOperationsInventoryRouteRoute,
   StwOperationsPartyRouteRoute,
   StwOperationsSaveQuestsRouteRoute,
   StwOperationsTaxiServiceRouteRoute,

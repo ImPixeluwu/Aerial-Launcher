@@ -173,19 +173,6 @@ function STWOperationsSection() {
         <div className="item">
           <Label
             className="title"
-            htmlFor="inventory"
-          >
-            {t('stw-operations.options.inventory')}
-          </Label>
-          <Switch
-            id="inventory"
-            checked={getMenuOptionVisibility('inventory')}
-            onCheckedChange={updateMenuOption('inventory')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
             htmlFor="xp-boosts"
           >
             {t('stw-operations.options.xp-boosts')}
