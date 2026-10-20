@@ -44,7 +44,7 @@ función se desarrolla en su propia sesión; empieza leyendo esto y luego el
 | Función | Estado | Documentos |
 |---|---|---|
 | Visor de inventario | Hecho; PR ImPixeluwu/Aerial-Launcher#3 (squash) | `inventory/SPEC.md` |
-| Catálogo de esquemas | Pendiente | `schematics/NOTES.md` |
+| Catálogo de esquemas | En curso (solo lectura) | `schematics/SPEC.md`, `schematics/NOTES.md` |
 | Visor de Homebase | Pendiente | `homebase/NOTES.md` |
 | Libro de colección | Pendiente | `collection-book/NOTES.md` |
 | Amigos y grupo | Pendiente | `friends-party/NOTES.md` |
