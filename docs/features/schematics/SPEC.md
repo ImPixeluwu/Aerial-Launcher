@@ -1,6 +1,6 @@
 # SPEC — Catálogo de esquemas de Salvar el Mundo
 
-Estado: v1 · Alcance: solo lectura (no modifica el perfil del jugador).
+Estado: v2 · Alcance: solo lectura (no modifica el perfil del jugador).
 
 Este documento describe **comportamiento**, no código. Parte de
 `schematics/NOTES.md` (lectura estática del catálogo de esquemas de GLOW
@@ -110,17 +110,24 @@ objeto resuelto [DATOS], y si no está, al id del esquema con `sid_` traducido a
 - `filterType`: el del inventario (`assault`, …, `melee_bat`, `trap_floor`,
   `trap_wall`, `trap_ceiling`).
 
-### 3.4 Grupo de tipo para el filtro (`typeGroup`)
+### 3.4 Categoría y tipo para el filtro (`group`, `filterType`)
 
-[CONFIRMADO, NOTES §2] Orden: `assault, pistol, sniper, shotgun, smg,
-explosive, melee, trap_floor, trap_wall, trap_ceiling`.
+[DECISIÓN del usuario, v2] El filtro tiene dos niveles:
 
-- `melee` agrupa todos los `melee_*`.
-- GLOW tiene además una opción `trap` que agrupa las tres trampas; aquí se
-  omite porque, con multiselección, equivale a marcar las tres
-  [DECISIÓN]. Los 338 esquemas de trampa de los datos son `floor`, `wall` o
-  `ceiling` [DATOS].
-- Un esquema sin tipo reconocido no tiene grupo; filtrar por tipo lo oculta.
+| Categoría (`group`) | Tipos (`filterType`), en este orden |
+|---|---|
+| `ranged` | `assault, pistol, sniper, shotgun, smg, explosive` |
+| `melee` | `melee_sword, melee_axe, melee_scythe, melee_spear, melee_hammer, melee_bat` |
+| `traps` | `trap_floor, trap_wall, trap_ceiling` |
+
+- `group`: `traps` si es trampa; `melee` si el tipo es `melee_*`; si no,
+  `ranged` (también las armas sin tipo reconocido).
+- GLOW usa una sola lista de tipos con `melee` y `trap` como opciones que
+  agrupan [CONFIRMADO, NOTES §2]; aquí la agrupación es el primer nivel y los
+  tipos de melee aparecen por separado. Los 338 esquemas de trampa de los
+  datos son `floor`, `wall` o `ceiling` [DATOS].
+- Un esquema sin tipo reconocido no tiene `filterType`; filtrar por tipo lo
+  oculta, pero sí aparece al filtrar solo por su categoría.
 
 ## 4. Agrupación
 
@@ -138,7 +145,8 @@ SchematicsOverview {
   error?: string
   collectionBookError?: string      // el libro no se pudo leer (§2)
   items: SchematicItem[]
-  typeCounts: Record<TypeGroup, number>     // nº de grupos por tipo
+  groupCounts: Record<Group, number>        // nº de grupos por categoría
+  typeCounts: Record<FilterType, number>    // nº de grupos por tipo
   rarityCounts: Record<Rarity, number>      // nº de grupos por rareza
   sourceCounts: Record<Source, number>      // nº de grupos por origen
 }
@@ -149,7 +157,7 @@ SchematicItem {
   source                       // 'campaign' | 'collection-book'
   name, description
   category                     // 'weapon' | 'trap'
-  subType, filterType, typeGroup, rarity, tier, material
+  subType, filterType, group, rarity, tier, material
   level, maxLevel              // maxLevel = tier × 10 + max_level_bonus
   superchargeLevel             // 0–5 (§6.2)
   powerLevel
@@ -186,6 +194,10 @@ Los del objeto resuelto, con las mismas reglas que el inventario
 (`inventory/SPEC.md` §6.1, §6.3 y §6.4) [DATOS]. GLOW usa sus propios iconos
 (`SID_…`/`TID_…`); **no se reutilizan** [regla del proyecto].
 
+Las perks se pintan como en el inventario: barras de tier a la izquierda y,
+en las de elemento, el icono del elemento junto al texto; las perks legacy
+de elemento muestran solo el icono, sin barras.
+
 Los nombres de objetos y perks vienen de los datos del juego en inglés; la
 página lo indica con una nota [CONFIRMADO: GLOW muestra el mismo aviso para
 las perks].
@@ -219,17 +231,25 @@ las perks].
 - Filtros [CONFIRMADO salvo origen]:
   - **Origen** (multiselección: Campaña, Libro de colección, con contador).
     Sin nada marcado se ven los dos [DECISIÓN del usuario].
-  - **Tipo** (multiselección, OR; §3.4). Se ocultan las opciones sin objetos.
+  - **Categoría** (multiselección: A distancia, Cuerpo a cuerpo, Trampas, con
+    contador; §3.4). Se ocultan las que no tienen objetos [DECISIÓN del
+    usuario, v2].
+  - **Tipo**: al marcar categorías aparece una fila con los tipos de esas
+    categorías que tienen objetos (multiselección, con contador). Al
+    desmarcar una categoría se quitan sus tipos de la selección.
   - **Rareza** (multiselección: mítico, legendario, épico, raro, poco común,
     común). Solo aparecen las que tienen algún objeto.
-  - Origen, tipo y rareza se combinan con AND.
+  - Origen, categoría, tipo y rareza se combinan con AND (OR dentro de cada
+    uno).
   - **Búsqueda**: subcadena sin distinguir mayúsculas sobre `name` +
     `templateId`, con 280 ms de espera.
   - "Limpiar filtros", desactivado si no hay filtros activos; **no** cambia el
     orden.
-- **Orden** [CONFIRMADO]: `power-desc` (por defecto), `power-asc`,
-  `level-desc`, `level-asc`, `name-asc`, `name-desc`, `rarity-desc` y
-  `rarity-asc`.
+- **Orden**: campo (`power` por defecto, `level`, `name`, `rarity`) más un
+  botón que alterna ascendente/descendente [DECISIÓN del usuario, v2; GLOW
+  tiene las 8 combinaciones como opciones de una lista, CONFIRMADO]. Al
+  cambiar de campo la dirección vuelve a la suya por defecto: descendente,
+  salvo `name`, que es ascendente.
   - Rango de rareza: c 1 < uc 2 < r 3 < vr 4 < sr 5 < Mítico 6 (GLOW distingue
     er 6 < ur 7; aquí son la misma rareza) [DECISIÓN].
   - Desempates: power → rareza ↓, nivel ↓, nombre; level → rareza ↓, power ↓,
@@ -243,10 +263,11 @@ las perks].
   inventario].
 - **Carta** [CONFIRMADO salvo origen]: color según la rareza; imagen; PL si es
   mayor que 0; cantidad si es mayor que 1 (formato del inventario); insignia
-  del tipo; marca de libro de colección si viene de ahí [DECISIÓN]; barra de XP
-  con ancho `((nivel − 1) % 10 + 1) × 10 %`, mínimo 8 %; cinco estrellas con
-  las primeras `tier` (1–5) encendidas y las primeras `superchargeLevel`
-  pintadas como supercargadas; nombre.
+  del tipo; marca de libro de colección si viene de ahí [DECISIÓN]; cinco
+  estrellas con las primeras `tier` (1–5) encendidas y las primeras
+  `superchargeLevel` pintadas como supercargadas; "NV x / máx" bajo las
+  estrellas (GLOW usa una barra de XP, CONFIRMADO; aquí se sustituye por el
+  texto, DECISIÓN del usuario, v2); nombre.
 - **Ficha** (modal; Escape o clic fuera la cierran) [CONFIRMADO]: la del
   inventario (cabecera con rareza | categoría | subtipo, nombre, PL, estrellas,
   "NV x / máx", estadísticas, perks con su tier, descripción) más el origen,
@@ -280,8 +301,8 @@ las perks].
   error "No se pudo autenticar la cuenta".
 - Error de red o de Epic en `campaign` → `success: false` con el
   `errorMessage` de Epic si existe.
-- `quantity` ausente → 1. `level` ausente → sin nivel, sin PL, barra de XP al
-  mínimo.
+- `quantity` ausente → 1. `level` ausente → sin nivel ni PL; la carta no
+  muestra "NV".
 - `templateId` en mayúsculas o minúsculas → la resolución ignora mayúsculas.
 
 ## 10. Pruebas de aceptación
@@ -307,13 +328,15 @@ las perks].
    `stacks = 2`.
 9. Las perks se resuelven como en el inventario (`aid_att_damage_t01` →
    "+10% Damage", tier 1).
-10. Orden `power-desc` con empate de PL → gana la rareza mayor; con empate de
-    rareza, el nivel mayor; después, el nombre.
-11. Orden `name-asc` ignora mayúsculas y acentos (`localeCompare`, base).
-12. Filtro de tipo `melee` incluye espadas y hachas; tipo + rareza se combinan
-    con AND.
-13. `typeCounts` y `rarityCounts` cuentan grupos; los tipos y rarezas sin
-    objetos no se ofrecen.
+10. Orden `power` descendente con empate de PL → gana la rareza mayor; con
+    empate de rareza, el nivel mayor; después, el nombre. En ascendente solo
+    se invierte el PL; los desempates no cambian.
+11. Orden `name` ascendente ignora mayúsculas y acentos (`localeCompare`,
+    base); descendente lo invierte.
+12. Categoría `melee` incluye espadas y hachas; dentro de ella, el tipo
+    `melee_axe` deja solo las hachas; categoría + rareza se combinan con AND.
+13. `groupCounts`, `typeCounts` y `rarityCounts` cuentan grupos; las
+    categorías, tipos y rarezas sin objetos no se ofrecen.
 14. Tier por nivel cuando el id no lo trae: nivel 25 → 3.
 
 ## 11. Implementación en Aerial
