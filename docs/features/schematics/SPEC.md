@@ -263,16 +263,16 @@ las perks].
   - El orden se conserva al cambiar de cuenta; los filtros se reinician
     [DECISIÓN].
 - Contador "N esquemas mostrados", lista sin agrupar [CONFIRMADO].
-- La cuadrícula se virtualiza () [DECISIÓN del
+- La cuadrícula se virtualiza (`@tanstack/react-virtual`) [DECISIÓN del
   usuario, v3; GLOW también la virtualiza, CONFIRMADO]: los veteranos tienen
   miles de esquemas y dibujarlos todos congelaba la ventana (2.000
   esquemas: 2.002 cartas en el DOM y 0,6–2,8 s por clic en un filtro; con
   virtualización, 20–50 cartas y ~30–50 ms). Las cartas tienen altura fija;
   las columnas salen del ancho (mínimo 7,5 rem); la cuadrícula se pinta en
-  diferido () para que los botones respondan al momento.
+  diferido (`useDeferredValue`) para que los botones respondan al momento.
   Al cambiar filtros u orden se vuelve al principio de la lista, y al
   recorrer la ficha con ← → la lista sigue al esquema abierto.
-   se valoró y se descartó: mide texto de altura variable
+  `chenglou/pretext` se valoró y se descartó: mide texto de altura variable
   sin reflow, pero aquí la altura es fija y el coste era el número de
   nodos.
 - **Carta** [CONFIRMADO salvo origen]: color según la rareza; imagen; PL si es
