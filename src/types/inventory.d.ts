@@ -67,6 +67,8 @@ export type InventoryAlteration = {
   tier: number | null
   rarity: RarityType | null
   element: InventoryElement | null
+  /** Perk id from the old perk system, resolved through MigrationMapping */
+  legacy: boolean
   modifiers: Array<InventoryStatModifier>
 }
 

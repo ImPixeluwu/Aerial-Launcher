@@ -107,7 +107,10 @@ function PerkTierBars({ color, tier }: { color: string; tier: number }) {
 export function PerkRow({ alteration }: { alteration: InventoryAlteration }) {
   const color = alteration.rarity ? perkColors[alteration.rarity] : undefined
   const elementIcon = alteration.element ? assets(alteration.element) : null
-  const hasMarker = alteration.tier !== null || elementIcon
+  // As in the game: tier bars on the left and the element icon next to the
+  // text. Legacy element perks have no tier bars, only the icon.
+  const iconAsMarker = elementIcon && alteration.legacy
+  const hasMarker = alteration.tier !== null || iconAsMarker
 
   return (
     <li
@@ -116,7 +119,7 @@ export function PerkRow({ alteration }: { alteration: InventoryAlteration }) {
     >
       {hasMarker && (
         <span className="flex w-10 shrink-0 items-center justify-center bg-secondary/80">
-          {elementIcon ? (
+          {iconAsMarker ? (
             <img
               src={elementIcon}
               alt={alteration.element ?? ''}
@@ -131,7 +134,15 @@ export function PerkRow({ alteration }: { alteration: InventoryAlteration }) {
           )}
         </span>
       )}
-      <span className="flex flex-grow items-center bg-secondary/50 px-2.5 py-1.5">
+      <span className="flex flex-grow items-center gap-2 bg-secondary/50 px-2.5 py-1.5">
+        {elementIcon && !iconAsMarker && (
+          <img
+            src={elementIcon}
+            alt={alteration.element ?? ''}
+            className="size-6 shrink-0 object-contain"
+            draggable={false}
+          />
+        )}
         {alteration.name}
       </span>
     </li>
