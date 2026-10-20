@@ -3,6 +3,11 @@
   "reload": "Recargar",
   "subtitle": "Esquemas de armas y trampas de tu perfil de campaña y de tu libro de colección.",
   "english-note": "Los nombres de objetos y perks se muestran en inglés, como en los datos del juego.",
+  "filter": {
+    "source": "Origen",
+    "category": "Categoría",
+    "rarity": "Rareza"
+  },
   "source": {
     "campaign": "Campaña",
     "collection-book": "Libro de colección"

@@ -1,6 +1,10 @@
+import type { ReactNode } from 'react'
 import type { SchematicItem } from '../../../types/schematics'
 
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
+
 import { createRoute } from '@tanstack/react-router'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { UpdateIcon } from '@radix-ui/react-icons'
 import {
   ArrowDownWideNarrow,
@@ -98,6 +102,7 @@ function Content() {
     filteredItems,
     groups,
     hasActiveFilters,
+    isFiltering,
     isLoading,
     overview,
     rarities,
@@ -153,10 +158,22 @@ function Content() {
 
   return (
     <div className="flex flex-col flex-grow gap-4">
+      <div className="flex flex-col gap-0.5 text-muted-foreground">
+        <p className="text-sm">{t('schematics.subtitle')}</p>
+        <p className="text-xs">{t('schematics.english-note')}</p>
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
-        <p className="flex-grow text-sm text-muted-foreground">
-          {t('schematics.subtitle')}
-        </p>
+        <div className="relative flex-grow min-w-48">
+          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+          <Input
+            className="pl-8"
+            placeholder={t('schematics.search-placeholder')}
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
+            spellCheck={false}
+          />
+        </div>
         <Select
           value={sortField}
           onValueChange={(value) => setSortField(value as typeof sortField)}
@@ -203,10 +220,13 @@ function Content() {
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* One row per filter, so a wider counter only wraps its own row */}
+      <div className="grid grid-cols-[auto,1fr] items-center gap-x-3 gap-y-2">
+        <FilterLabel>{t('schematics.filter.source')}</FilterLabel>
         <ToggleGroup
           type="multiple"
           variant="outline"
+          className="flex-wrap justify-start"
           value={sources}
           onValueChange={(value) => setSources(value as typeof sources)}
         >
@@ -216,105 +236,97 @@ function Content() {
               value={source}
             >
               {t(`schematics.source.${source}`)}
-              <span className="ml-1 text-muted-foreground">
-                {overview?.sourceCounts[source] ?? 0}
-              </span>
+              <FilterCount value={overview?.sourceCounts[source]} />
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
 
         {availableGroups.length > 0 && (
+          <>
+            <FilterLabel>{t('schematics.filter.category')}</FilterLabel>
+            <ToggleGroup
+              type="multiple"
+              variant="outline"
+              className="flex-wrap justify-start"
+              value={groups}
+              onValueChange={(value) => setGroups(value as typeof groups)}
+            >
+              {availableGroups.map((group) => (
+                <ToggleGroupItem
+                  key={group}
+                  value={group}
+                >
+                  {t(`schematics.group.${group}`)}
+                  <FilterCount value={overview?.groupCounts[group]} />
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </>
+        )}
+
+        {availableTypes.length > 0 && (
           <ToggleGroup
             type="multiple"
             variant="outline"
-            value={groups}
-            onValueChange={(value) => setGroups(value as typeof groups)}
+            className="col-start-2 flex-wrap justify-start"
+            value={types}
+            onValueChange={(value) => setTypes(value as typeof types)}
           >
-            {availableGroups.map((group) => (
+            {availableTypes.map((type) => (
               <ToggleGroupItem
-                key={group}
-                value={group}
+                key={type}
+                value={type}
               >
-                {t(`schematics.group.${group}`)}
-                <span className="ml-1 text-muted-foreground">
-                  {overview?.groupCounts[group] ?? 0}
-                </span>
+                {t(`schematics.type.${type}`)}
+                <FilterCount value={overview?.typeCounts[type]} />
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
         )}
 
         {availableRarities.length > 0 && (
-          <ToggleGroup
-            type="multiple"
-            variant="outline"
-            value={rarities}
-            onValueChange={(value) => setRarities(value as typeof rarities)}
-          >
-            {availableRarities.map((rarity) => (
-              <ToggleGroupItem
-                key={rarity}
-                value={rarity}
-                title={t(`inventory.rarity.${rarity}`)}
-              >
-                <span
-                  className="size-2.5 rounded-full mr-1"
-                  style={{ backgroundColor: raritiesColor[rarity] }}
-                />
-                {overview?.rarityCounts[rarity] ?? 0}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+          <>
+            <FilterLabel>{t('schematics.filter.rarity')}</FilterLabel>
+            <ToggleGroup
+              type="multiple"
+              variant="outline"
+              className="flex-wrap justify-start"
+              value={rarities}
+              onValueChange={(value) => setRarities(value as typeof rarities)}
+            >
+              {availableRarities.map((rarity) => (
+                <ToggleGroupItem
+                  key={rarity}
+                  value={rarity}
+                  title={t(`inventory.rarity.${rarity}`)}
+                >
+                  <span
+                    className="size-2.5 rounded-full mr-1"
+                    style={{ backgroundColor: raritiesColor[rarity] }}
+                  />
+                  <span className="tabular-nums">
+                    {overview?.rarityCounts[rarity] ?? 0}
+                  </span>
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </>
         )}
+      </div>
 
-        <div className="relative flex-grow min-w-48">
-          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder={t('schematics.search-placeholder')}
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            spellCheck={false}
-          />
-        </div>
-
+      <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
+        <span className="tabular-nums">
+          {t('schematics.items-shown', { count: filteredItems.length })}
+        </span>
         <Button
           variant="ghost"
+          size="sm"
           onClick={resetFilters}
           disabled={!hasActiveFilters}
         >
           <X className="size-4 mr-1" />
           {t('schematics.clear-filters')}
         </Button>
-      </div>
-
-      {availableTypes.length > 0 && (
-        <ToggleGroup
-          type="multiple"
-          variant="outline"
-          className="flex-wrap justify-start"
-          value={types}
-          onValueChange={(value) => setTypes(value as typeof types)}
-        >
-          {availableTypes.map((type) => (
-            <ToggleGroupItem
-              key={type}
-              value={type}
-            >
-              {t(`schematics.type.${type}`)}
-              <span className="ml-1 text-muted-foreground">
-                {overview?.typeCounts[type] ?? 0}
-              </span>
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      )}
-
-      <div className="flex flex-wrap justify-between gap-x-4 text-sm text-muted-foreground">
-        <span>
-          {t('schematics.items-shown', { count: filteredItems.length })}
-        </span>
-        <span className="text-xs">{t('schematics.english-note')}</span>
       </div>
 
       {overview?.collectionBookError && (
@@ -337,20 +349,12 @@ function Content() {
           <p>{t('schematics.no-matches')}</p>
         </div>
       ) : (
-        <div
-          className={cn(
-            'grid gap-3 grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))]',
-            { 'opacity-60': isLoading },
-          )}
-        >
-          {filteredItems.map((item) => (
-            <SchematicCard
-              key={item.itemKey}
-              item={item}
-              onSelect={() => setSelectedItemKey(item.itemKey)}
-            />
-          ))}
-        </div>
+        <SchematicGrid
+          items={filteredItems}
+          isStale={isLoading || isFiltering}
+          selectedIndex={selectedIndex}
+          onSelect={setSelectedItemKey}
+        />
       )}
 
       <SchematicDetail
@@ -364,6 +368,130 @@ function Content() {
         onPrevious={() => selectItemAt(selectedIndex - 1)}
         onNext={() => selectItemAt(selectedIndex + 1)}
       />
+    </div>
+  )
+}
+
+function FilterLabel({ children }: { children: ReactNode }) {
+  return <span className="text-sm text-muted-foreground">{children}</span>
+}
+
+function FilterCount({ value }: { value?: number }) {
+  return (
+    <span className="ml-1 tabular-nums text-muted-foreground">
+      {value ?? 0}
+    </span>
+  )
+}
+
+// Card size in px: 7.5rem wide at least, fixed height so every row of the
+// virtual grid has the same size
+const cardMinWidth = 120
+const cardHeight = 156
+const gridGap = 12
+
+/**
+ * Only the visible rows are rendered: accounts can have thousands of
+ * schematics. The page scrolls in the main layout viewport.
+ */
+function SchematicGrid({
+  isStale,
+  items,
+  selectedIndex,
+  onSelect,
+}: {
+  isStale: boolean
+  items: Array<SchematicItem>
+  selectedIndex: number
+  onSelect: (itemKey: string) => void
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
+  const [scrollMargin, setScrollMargin] = useState(0)
+  const [scrollElement] = useState(() =>
+    document.querySelector<HTMLElement>('.main-wrapper-content'),
+  )
+
+  const columns = Math.max(
+    1,
+    Math.floor((width + gridGap) / (cardMinWidth + gridGap)),
+  )
+  const virtualizer = useVirtualizer({
+    count: Math.ceil(items.length / columns),
+    getScrollElement: () => scrollElement,
+    estimateSize: () => cardHeight + gridGap,
+    overscan: 4,
+    scrollMargin,
+  })
+
+  useLayoutEffect(() => {
+    const container = containerRef.current
+
+    if (!container) {
+      return
+    }
+
+    const observer = new ResizeObserver(([entry]) =>
+      setWidth(entry.contentRect.width),
+    )
+
+    observer.observe(container)
+
+    return () => observer.disconnect()
+  }, [])
+
+  // The filters above the grid change height as they wrap
+  useLayoutEffect(() => {
+    const offsetTop = containerRef.current?.offsetTop ?? 0
+
+    if (offsetTop !== scrollMargin) {
+      setScrollMargin(offsetTop)
+    }
+  })
+
+  // A new filter or order starts at the top of the list
+  useEffect(() => {
+    if (scrollElement && scrollElement.scrollTop > scrollMargin) {
+      scrollElement.scrollTop = scrollMargin
+    }
+  }, [items])
+
+  // Keep the schematic open in the details in view
+  useEffect(() => {
+    if (selectedIndex >= 0) {
+      virtualizer.scrollToIndex(Math.floor(selectedIndex / columns))
+    }
+  }, [selectedIndex])
+
+  return (
+    <div
+      ref={containerRef}
+      className={cn('relative w-full transition-opacity', {
+        'opacity-60': isStale,
+      })}
+      style={{ height: virtualizer.getTotalSize() - gridGap }}
+    >
+      {virtualizer.getVirtualItems().map((row) => (
+        <div
+          key={row.key}
+          className="absolute left-0 top-0 grid w-full gap-3"
+          style={{
+            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+            height: cardHeight,
+            transform: `translateY(${row.start - scrollMargin}px)`,
+          }}
+        >
+          {items
+            .slice(row.index * columns, (row.index + 1) * columns)
+            .map((item) => (
+              <SchematicCard
+                key={item.itemKey}
+                item={item}
+                onSelect={onSelect}
+              />
+            ))}
+        </div>
+      ))}
     </div>
   )
 }
@@ -395,12 +523,12 @@ function SchematicStars({ item }: { item: SchematicItem }) {
   )
 }
 
-function SchematicCard({
+const SchematicCard = memo(function SchematicCard({
   item,
   onSelect,
 }: {
   item: SchematicItem
-  onSelect: () => void
+  onSelect: (itemKey: string) => void
 }) {
   const { t } = useTranslation(['stw-operations'])
   const typeIcon = item.filterType
@@ -410,9 +538,9 @@ function SchematicCard({
   return (
     <button
       type="button"
-      className="flex flex-col items-center gap-1 rounded-md border-2 p-2 text-left hover:brightness-125 transition"
-      style={rarityStyle(item.rarity)}
-      onClick={onSelect}
+      className="flex flex-col items-center gap-1 overflow-hidden rounded-md border-2 p-2 text-left hover:brightness-125 transition"
+      style={{ ...rarityStyle(item.rarity), height: cardHeight }}
+      onClick={() => onSelect(item.itemKey)}
       title={t('schematics.view-details')}
     >
       <div className="relative w-full">
@@ -463,7 +591,7 @@ function SchematicCard({
       </span>
     </button>
   )
-}
+})
 
 function SchematicDetail({
   item,

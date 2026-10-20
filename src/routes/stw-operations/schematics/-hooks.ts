@@ -8,7 +8,7 @@ import type {
   SchematicsOverview,
 } from '../../../types/schematics'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useDebounce } from '@uidotdev/usehooks'
 
 import {
@@ -168,6 +168,9 @@ export function useSchematicsData() {
     ],
   )
 
+  // The grid renders in the background, so filter buttons respond at once
+  const deferredItems = useDeferredValue(filteredItems)
+
   const selectedItem =
     overview?.items.find((item) => item.itemKey === selectedItemKey) ?? null
   const hasActiveFilters =
@@ -178,9 +181,10 @@ export function useSchematicsData() {
     searchValue.trim().length > 0
 
   return {
-    filteredItems,
+    filteredItems: deferredItems,
     groups,
     hasActiveFilters,
+    isFiltering: deferredItems !== filteredItems,
     isLoading,
     overview,
     rarities,
