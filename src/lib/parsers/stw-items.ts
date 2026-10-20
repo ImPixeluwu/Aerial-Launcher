@@ -256,6 +256,7 @@ export function findStwAlteration(alterationId: string): InventoryAlteration {
             id.toLowerCase().includes(element.toLowerCase()),
           ) ?? null
         : null),
+    legacy: !record,
     modifiers: record?.m ?? legacy?.modifiers ?? [],
   }
 }

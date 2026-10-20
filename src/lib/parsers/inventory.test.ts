@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { RarityType } from '../../config/constants/resources'
 
 import { parseInventoryProfile } from './inventory'
-import { calculateStwPowerLevel } from './stw-items'
+import { calculateStwPowerLevel, findStwAlteration } from './stw-items'
 
 function item(
   templateId: string,
@@ -386,5 +386,27 @@ describe('calculateStwPowerLevel', () => {
     expect(
       calculateStwPowerLevel({ level: null, rarity: null, tier: null }),
     ).toBeNull()
+  })
+})
+
+describe('findStwAlteration', () => {
+  it('keeps the tier of current element perks', () => {
+    expect(findStwAlteration('Alteration:aid_ele_energy_t05')).toMatchObject({
+      tier: 5,
+      element: 'Energy',
+      legacy: false,
+    })
+  })
+
+  it('flags legacy element perks', () => {
+    expect(
+      findStwAlteration('Alteration:aid_g_ranged_energyaffliction'),
+    ).toMatchObject({ element: 'Energy', legacy: true })
+  })
+
+  it('does not flag current perks as legacy', () => {
+    expect(findStwAlteration('Alteration:aid_att_damage_t01').legacy).toBe(
+      false,
+    )
   })
 })
