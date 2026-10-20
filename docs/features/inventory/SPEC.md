@@ -246,8 +246,12 @@ Lo que no coincide (desconocido o fuera del objeto):
   juego]. Las perks sin tier usan la rareza de los datos.
 - Presentación como en el juego: un bloque con cinco barras apiladas,
   rellenas desde abajo hasta el tier y del color de la rareza; las perks de
-  elemento ("Element: X…") muestran el icono del elemento de Aerial; las perks
-  de juego sin tier ocupan la fila entera sin marcador.
+  juego sin tier ocupan la fila entera sin marcador.
+- Perks de elemento ("Element: X…") [DATOS, captura del juego]: conservan las
+  barras de tier a la izquierda y llevan el icono del elemento de Aerial
+  junto al texto. Las perks de elemento **legacy** (id fuera de los datos
+  actuales, p. ej. `aid_g_ranged_energyaffliction`) no tienen barras: el
+  icono ocupa su lugar. El campo `legacy` de cada perk lo indica.
 - Perks legacy [DATOS]: las armas antiguas guardan ids del sistema de perks
   anterior (`aid_att_ranged_damage`, `…_alt1`, `aid_g_ranged_energyaffliction`…),
   que ya no están en los datos actuales. Se traducen con la tabla del propio
