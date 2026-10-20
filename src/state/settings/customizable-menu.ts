@@ -41,6 +41,7 @@ export const customizableMenuSettingsRelations: Record<
     'dailyQuests',
     'homebaseName',
     'inventory',
+    'schematics',
     'xpBoosts',
     'autoPinUrns',
     'autoLlamas',

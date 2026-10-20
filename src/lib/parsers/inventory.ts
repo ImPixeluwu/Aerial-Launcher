@@ -174,7 +174,7 @@ function iconRarity(rarity: RarityType | null) {
   return rarity === RarityType.Mythic ? 'er' : rarity
 }
 
-function describeItem(
+export function describeInventoryItem(
   category: InventoryCategory,
   id: string,
   rarity: RarityType | null,
@@ -230,7 +230,7 @@ function describeItem(
  * Perk ids usually come in attributes.alterations; some profiles use
  * attributes.alterationDefinitions instead.
  */
-function readAlterationIds(
+export function readAlterationIds(
   attributes: MCPQueryProfileStorageItem['attributes'] | undefined,
 ) {
   const source = [attributes?.alterations, attributes?.alterationDefinitions]
@@ -341,7 +341,7 @@ export function parseInventoryProfile(
       meleeFilterTypes.includes(filterType)
         ? 'melee'
         : templateCategory
-    const fallback = describeItem(category, id, rarity, filterType)
+    const fallback = describeInventoryItem(category, id, rarity, filterType)
     const hasPowerLevel = category !== 'ingredients' && category !== 'materials'
 
     groups.set(itemKey, {

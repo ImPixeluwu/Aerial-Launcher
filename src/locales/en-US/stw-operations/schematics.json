@@ -1,0 +1,52 @@
+{
+  "no-account": "Select an account to view its schematics.",
+  "reload": "Reload",
+  "subtitle": "Weapon and trap schematics from your campaign profile and your collection book.",
+  "english-note": "Item and perk names are shown in English, as in the game data.",
+  "source": {
+    "campaign": "Campaign",
+    "collection-book": "Collection Book"
+  },
+  "type": {
+    "assault": "Assault",
+    "pistol": "Pistol",
+    "sniper": "Sniper",
+    "shotgun": "Shotgun",
+    "smg": "SMG",
+    "explosive": "Explosive",
+    "melee": "Melee",
+    "trap_floor": "Floor trap",
+    "trap_wall": "Wall trap",
+    "trap_ceiling": "Ceiling trap"
+  },
+  "category": {
+    "weapon": "Weapon",
+    "trap": "Trap"
+  },
+  "sort": {
+    "label": "Sort by",
+    "power-desc": "Power (highest first)",
+    "power-asc": "Power (lowest first)",
+    "level-desc": "Level (highest first)",
+    "level-asc": "Level (lowest first)",
+    "name-asc": "Name (A–Z)",
+    "name-desc": "Name (Z–A)",
+    "rarity-desc": "Rarity (highest first)",
+    "rarity-asc": "Rarity (lowest first)"
+  },
+  "search-placeholder": "Search by name or template ID…",
+  "clear-filters": "Clear filters",
+  "items-shown_one": "{{count}} schematic shown",
+  "items-shown_other": "{{count}} schematics shown",
+  "load-failed": "Could not load the schematics",
+  "collection-book-failed": "Could not read the collection book; only campaign schematics are shown",
+  "no-matches": "No schematics match your filters.",
+  "view-details": "View details",
+  "supercharged_one": "{{count}} supercharge",
+  "supercharged_other": "{{count}} supercharges",
+  "prop": {
+    "source": "Source",
+    "supercharge": "Supercharge",
+    "item-template": "Crafted item"
+  }
+}

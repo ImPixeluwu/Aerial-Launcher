@@ -11,6 +11,7 @@ import type {
   MCPSetPinnedQuestsResponse,
 } from '../../types/services/mcp/claim-rewards'
 import type { InventoryProfileId } from '../../types/inventory'
+import type { SchematicsProfileId } from '../../types/schematics'
 import type { MCPHomebaseNameResponse } from '../../types/services/mcp/homebase-name'
 import type {
   MCPActivateConsumableResponse,
@@ -98,7 +99,7 @@ export function getQueryProfileInventory({
 }: {
   accessToken: string
   accountId: string
-  profileId: InventoryProfileId
+  profileId: InventoryProfileId | SchematicsProfileId
 }) {
   return baseGameService.post<MCPQueryProfileStorageProfile>(
     `/profile/${accountId}/client/QueryProfile`,

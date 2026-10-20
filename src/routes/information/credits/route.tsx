@@ -190,8 +190,9 @@ export function ComponentRoute() {
                   PegLegResources <ExternalLink className="h-3 w-3" />
                 </a>
                 <div>
-                  Item names, images, perks and power level tables used by
-                  the inventory viewer.
+                  Item names, images, perks, power level tables and
+                  schematic data used by the inventory viewer and the
+                  schematics catalog.
                 </div>
               </li>
               <li className="item">

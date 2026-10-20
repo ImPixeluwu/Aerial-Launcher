@@ -1,17 +1,11 @@
-import type {
-  InventoryAlteration,
-  InventoryItem,
-  InventoryItemStats,
-} from "../../../types/inventory";
-
-import { useEffect, useState } from "react";
+import type { InventoryItem } from "../../../types/inventory";
 
 import { createRoute } from "@tanstack/react-router";
 import { UpdateIcon } from "@radix-ui/react-icons";
-import { ChevronLeft, ChevronRight, Search, Star, X, Zap } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { RarityType, raritiesColor } from "../../../config/constants/resources";
+import { raritiesColor } from "../../../config/constants/resources";
 
 import { Route as RootRoute } from "../../__root";
 
@@ -24,16 +18,15 @@ import {
   BreadcrumbSeparator,
 } from "../../../components/ui/breadcrumb";
 import { Button } from "../../../components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
-import { ScrollArea } from "../../../components/ui/scroll-area";
+import { ItemDetailDialog } from "../../../components/stw-items/item-detail-dialog";
+import {
+  ItemImage,
+  PowerBadge,
+  TierStars,
+  formatQuantity,
+  rarityStyle,
+} from "../../../components/stw-items/item-parts";
 import {
   Select,
   SelectContent,
@@ -53,8 +46,6 @@ import {
   inventoryProfileIds,
   inventoryRarityOrder,
 } from "../../../config/constants/inventory";
-import { compactNumber } from "../../../lib/parsers/numbers";
-import { assets } from "../../../lib/repository";
 import { cn } from "../../../lib/utils";
 
 export const Route = createRoute({
@@ -86,14 +77,6 @@ export const Route = createRoute({
     );
   },
 });
-
-function fallbackIcon(item: InventoryItem) {
-  return assets(item.iconKey) ?? assets("question");
-}
-
-function formatQuantity(value: number) {
-  return value >= 10_000 ? compactNumber(value) : value.toLocaleString();
-}
 
 function Content() {
   const { t } = useTranslation(["stw-operations"]);
@@ -281,66 +264,6 @@ function Content() {
   );
 }
 
-// Perk colors as shown in game: grey, green, blue, purple, gold
-const perkColors: Record<RarityType, string> = {
-  [RarityType.Common]: "#c4c4c4",
-  [RarityType.Uncommon]: "#5fc314",
-  [RarityType.Rare]: "#2fa3f5",
-  [RarityType.Epic]: "#b45cf0",
-  [RarityType.Legendary]: "#f5c242",
-  [RarityType.Mythic]: "#f5c242",
-};
-
-function rarityStyle(item: InventoryItem) {
-  const color = raritiesColor[item.rarity ?? RarityType.Common];
-
-  return {
-    borderColor: color,
-    background: `linear-gradient(180deg, ${color}33 0%, transparent 70%)`,
-  };
-}
-
-function ItemImage({
-  className,
-  item,
-}: {
-  className?: string;
-  item: InventoryItem;
-}) {
-  const [hasError, setHasError] = useState(false);
-
-  return (
-    <img
-      src={!hasError && item.imageUrl ? item.imageUrl : fallbackIcon(item)}
-      alt=""
-      className={cn("object-contain", className)}
-      draggable={false}
-      loading="lazy"
-      onError={() => setHasError(true)}
-    />
-  );
-}
-
-function PowerBadge({
-  className,
-  powerLevel,
-}: {
-  className?: string;
-  powerLevel: number;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-0.5 rounded bg-black/70 px-1 text-xs font-semibold",
-        className,
-      )}
-    >
-      <Zap className="size-3 fill-current text-yellow-400" />
-      {powerLevel}
-    </span>
-  );
-}
-
 function ItemCard({
   item,
   onSelect,
@@ -354,12 +277,16 @@ function ItemCard({
     <button
       type="button"
       className="flex flex-col items-center gap-1 rounded-md border-2 p-2 text-left hover:brightness-125 transition"
-      style={rarityStyle(item)}
+      style={rarityStyle(item.rarity)}
       onClick={onSelect}
       title={t("inventory.view-details")}
     >
       <div className="relative w-full">
-        <ItemImage item={item} className="mx-auto size-16" />
+        <ItemImage
+          iconKey={item.iconKey}
+          imageUrl={item.imageUrl}
+          className="mx-auto size-16"
+        />
         {item.quantity > 1 && (
           <span className="absolute bottom-0 right-0 rounded bg-black/70 px-1 text-xs">
             x{formatQuantity(item.quantity)}
@@ -380,91 +307,6 @@ function ItemCard({
   );
 }
 
-function TierStars({ tier }: { tier: number }) {
-  return (
-    <span className="flex gap-0.5 text-yellow-400">
-      {Array.from({ length: tier }, (_, index) => (
-        <Star key={index} className="size-3 fill-current" />
-      ))}
-    </span>
-  );
-}
-
-function PerkTierBars({ color, tier }: { color: string; tier: number }) {
-  return (
-    <span className="flex flex-col-reverse gap-[3px]">
-      {Array.from({ length: 5 }, (_, index) => (
-        <span
-          key={index}
-          className="h-[5px] w-3 bg-black/40"
-          style={index < tier ? { backgroundColor: color } : {}}
-        />
-      ))}
-    </span>
-  );
-}
-
-function PerkRow({ alteration }: { alteration: InventoryAlteration }) {
-  const color = alteration.rarity ? perkColors[alteration.rarity] : undefined;
-  const elementIcon = alteration.element ? assets(alteration.element) : null;
-  const hasMarker = alteration.tier !== null || elementIcon;
-
-  return (
-    <li className="flex min-h-10 items-stretch gap-0.5" title={alteration.id}>
-      {hasMarker && (
-        <span className="flex w-10 shrink-0 items-center justify-center bg-secondary/80">
-          {elementIcon ? (
-            <img
-              src={elementIcon}
-              alt={alteration.element ?? ""}
-              className="size-7 object-contain"
-              draggable={false}
-            />
-          ) : (
-            <PerkTierBars
-              color={color ?? perkColors[RarityType.Common]}
-              tier={alteration.tier ?? 0}
-            />
-          )}
-        </span>
-      )}
-      <span className="flex flex-grow items-center bg-secondary/50 px-2.5 py-1.5">
-        {alteration.name}
-      </span>
-    </li>
-  );
-}
-
-function formatStat(key: keyof InventoryItemStats, value: number) {
-  switch (key) {
-    case "critChance":
-    case "critDamage":
-      return `${Math.round(value * 1000) / 10}%`;
-    case "attackTime":
-    case "fireDelay":
-    case "reloadTime":
-      return `${value.toFixed(2)} s`;
-    case "fireRate":
-      return value.toFixed(2);
-    default:
-      return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
-  }
-}
-
-const statOrder: Array<keyof InventoryItemStats> = [
-  "damage",
-  "critChance",
-  "critDamage",
-  "attackTime",
-  "fireRate",
-  "fireDelay",
-  "clipSize",
-  "reloadTime",
-  "ammoCost",
-  "durability",
-  "impact",
-];
-
 function ItemDetail({
   item,
   position,
@@ -479,221 +321,52 @@ function ItemDetail({
   onPrevious: () => void;
 }) {
   const { t } = useTranslation(["stw-operations"]);
-  const hasPrevious = position !== null && position.index > 0;
-  const hasNext = position !== null && position.index < position.total - 1;
-
-  useEffect(() => {
-    if (!item) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft" && hasPrevious) {
-        event.preventDefault();
-        onPrevious();
-      } else if (event.key === "ArrowRight" && hasNext) {
-        event.preventDefault();
-        onNext();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [item, hasPrevious, hasNext, onPrevious, onNext]);
-
-  const stats = item?.stats
-    ? statOrder.flatMap((key) => {
-        const value = item.stats?.[key];
-
-        return typeof value === "number" ? [[key, value] as const] : [];
-      })
-    : [];
-  const extraRows = item
-    ? [
-        [t("inventory.prop.quantity"), item.quantity.toLocaleString()],
-        [t("inventory.prop.stacks"), String(item.stacks)],
-        [
-          t("inventory.prop.material"),
-          item.material ? t(`inventory.material.${item.material}`) : "—",
-        ],
-        [t("inventory.prop.template"), item.templateId],
-      ]
-    : [];
 
   return (
-    <Dialog
-      open={item !== null}
-      onOpenChange={(open) => {
-        if (!open) {
-          onClose();
+    <ItemDetailDialog
+      detail={
+        item && {
+          key: item.itemKey,
+          name: item.name,
+          iconKey: item.iconKey,
+          imageUrl: item.imageUrl,
+          rarity: item.rarity,
+          labels: [
+            item.rarity ? t(`inventory.rarity.${item.rarity}`) : null,
+            t(`inventory.category.${item.category}`),
+            item.subType,
+          ].filter((label): label is string => Boolean(label)),
+          powerLevel: item.powerLevel,
+          stars: item.tier !== null && <TierStars tier={item.tier} />,
+          levelText:
+            item.level === null
+              ? null
+              : item.maxLevel !== null
+                ? t("inventory.level-of", {
+                    level: item.level,
+                    max: item.maxLevel,
+                  })
+                : t("inventory.level-short", { level: item.level }),
+          level: item.level,
+          stats: item.stats,
+          alterations: item.alterations,
+          showNoPerks: item.category === "ranged" || item.category === "melee",
+          description: item.description,
+          rows: [
+            [t("inventory.prop.quantity"), item.quantity.toLocaleString()],
+            [t("inventory.prop.stacks"), String(item.stacks)],
+            [
+              t("inventory.prop.material"),
+              item.material ? t(`inventory.material.${item.material}`) : "—",
+            ],
+            [t("inventory.prop.template"), item.templateId],
+          ],
         }
-      }}
-    >
-      <DialogContent
-        className="max-w-3xl gap-0 overflow-hidden p-0"
-        hideCloseButton
-        onOpenAutoFocus={(event) => event.preventDefault()}
-      >
-        {position && (
-          <div className="absolute left-2 top-2 z-10 flex items-center gap-1 text-sm text-muted-foreground">
-            <button
-              type="button"
-              className="flex size-10 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
-              onClick={onPrevious}
-              disabled={!hasPrevious}
-              aria-label={t("inventory.previous")}
-              title={t("inventory.previous")}
-            >
-              <ChevronLeft className="size-6" />
-            </button>
-            <span className="min-w-14 text-center tabular-nums">
-              {position.index + 1} / {position.total}
-            </span>
-            <button
-              type="button"
-              className="flex size-10 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
-              onClick={onNext}
-              disabled={!hasNext}
-              aria-label={t("inventory.next")}
-              title={t("inventory.next")}
-            >
-              <ChevronRight className="size-6" />
-            </button>
-          </div>
-        )}
-        <DialogClose
-          className="absolute right-2 top-2 z-10 flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={t("inventory.close")}
-        >
-          <X className="size-6" />
-        </DialogClose>
-        {item && (
-          <ScrollArea viewportClassName="max-h-[90vh]">
-            <div className="grid gap-4 p-6 pt-14">
-              <DialogHeader
-                className="rounded-md border-2 p-3"
-                style={rarityStyle(item)}
-              >
-                <div className="flex gap-4">
-                  <ItemImage
-                    key={item.itemKey}
-                    item={item}
-                    className="size-24 shrink-0"
-                  />
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <DialogDescription>
-                      {[
-                        item.rarity
-                          ? t(`inventory.rarity.${item.rarity}`)
-                          : null,
-                        t(`inventory.category.${item.category}`),
-                        item.subType,
-                      ]
-                        .filter(Boolean)
-                        .join(" | ")}
-                    </DialogDescription>
-                    <DialogTitle className="text-xl">{item.name}</DialogTitle>
-                    <div className="flex flex-wrap items-center gap-3 text-sm">
-                      {item.powerLevel !== null && (
-                        <PowerBadge
-                          powerLevel={item.powerLevel}
-                          className="text-sm"
-                        />
-                      )}
-                      {item.tier !== null && <TierStars tier={item.tier} />}
-                      {item.level !== null && (
-                        <span>
-                          {item.maxLevel !== null
-                            ? t("inventory.level-of", {
-                                level: item.level,
-                                max: item.maxLevel,
-                              })
-                            : t("inventory.level-short", { level: item.level })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </DialogHeader>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="flex flex-col gap-4">
-                  {stats.length > 0 && (
-                    <section className="text-sm">
-                      <h3 className="mb-2 font-semibold">
-                        {t("inventory.stats-title", {
-                          level: item.level ?? 1,
-                        })}
-                      </h3>
-                      <dl className="divide-y rounded-md border">
-                        {stats.map(([key, value]) => (
-                          <div
-                            key={key}
-                            className="flex justify-between px-3 py-1.5"
-                          >
-                            <dt className="text-muted-foreground">
-                              {t(`inventory.stat.${key}`)}
-                            </dt>
-                            <dd className="font-semibold">
-                              {formatStat(key, value)}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
-                      {stats.some(([key]) => key === "damage") && (
-                        <p className="mt-1.5 text-xs text-muted-foreground">
-                          {t("inventory.stats-note")}
-                        </p>
-                      )}
-                    </section>
-                  )}
-
-                  <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
-                    {extraRows.map(([label, value]) => (
-                      <div key={label} className="contents">
-                        <dt className="text-muted-foreground">{label}</dt>
-                        <dd className="break-all">{value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  {item.alterations.length > 0 ? (
-                    <section className="text-sm">
-                      <h3 className="mb-2 font-semibold">
-                        {t("inventory.alterations")}
-                      </h3>
-                      <ul className="flex flex-col gap-1 overflow-hidden rounded-md">
-                        {item.alterations.map((alteration, index) => (
-                          <PerkRow
-                            key={`${alteration.id}-${index}`}
-                            alteration={alteration}
-                          />
-                        ))}
-                      </ul>
-                    </section>
-                  ) : (
-                    (item.category === "ranged" ||
-                      item.category === "melee") && (
-                      <p className="text-sm text-muted-foreground">
-                        {t("inventory.no-perks")}
-                      </p>
-                    )
-                  )}
-
-                  {item.description && (
-                    <p className="text-sm italic text-muted-foreground">
-                      {item.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </ScrollArea>
-        )}
-      </DialogContent>
-    </Dialog>
+      }
+      position={position}
+      onClose={onClose}
+      onNext={onNext}
+      onPrevious={onPrevious}
+    />
   );
 }

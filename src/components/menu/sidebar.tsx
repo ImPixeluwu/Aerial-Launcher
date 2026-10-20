@@ -260,6 +260,21 @@ export function SidebarMenu({
                       </Link>
                     </li>
                   )}
+                  {getMenuOptionVisibility('schematics') && (
+                    <li className="item">
+                      <Link
+                        to="/stw-operations/schematics"
+                        className={currentClassNameHover}
+                        activeProps={{
+                          className: cn(activeClassName),
+                        }}
+                        onClick={goToPage}
+                        onAuxClick={whatIsThis()}
+                      >
+                        {t('stw-operations.options.schematics')}
+                      </Link>
+                    </li>
+                  )}
                   {getMenuOptionVisibility('xpBoosts') && (
                     <li className="item">
                       <Link
