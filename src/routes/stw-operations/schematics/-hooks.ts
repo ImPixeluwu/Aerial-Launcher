@@ -1,8 +1,10 @@
 import type { RarityType } from '../../../config/constants/resources'
+import type { InventoryFilterType } from '../../../types/inventory'
 import type {
-  SchematicSortKey,
+  SchematicGroup,
+  SchematicSortDirection,
+  SchematicSortField,
   SchematicSource,
-  SchematicTypeGroup,
   SchematicsOverview,
 } from '../../../types/schematics'
 
@@ -10,7 +12,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDebounce } from '@uidotdev/usehooks'
 
 import {
-  schematicDefaultSortKey,
+  schematicDefaultSortDirections,
+  schematicDefaultSortField,
+  schematicTypesByGroup,
   schematicsCacheTime,
   schematicsSearchDelay,
 } from '../../../config/constants/schematics'
@@ -38,20 +42,43 @@ export function useSchematicsData() {
   const [overview, setOverview] = useState<SchematicsOverview | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [sources, setSources] = useState<Array<SchematicSource>>([])
-  const [typeGroups, setTypeGroups] = useState<Array<SchematicTypeGroup>>([])
+  const [groups, setGroupsState] = useState<Array<SchematicGroup>>([])
+  const [types, setTypes] = useState<Array<InventoryFilterType>>([])
   const [rarities, setRarities] = useState<Array<RarityType>>([])
   const [searchValue, setSearchValue] = useState('')
-  const [sortKey, setSortKey] = useState<SchematicSortKey>(
-    schematicDefaultSortKey,
+  const [sortField, setSortFieldState] = useState<SchematicSortField>(
+    schematicDefaultSortField,
+  )
+  const [sortDirection, setSortDirection] = useState<SchematicSortDirection>(
+    schematicDefaultSortDirections[schematicDefaultSortField],
   )
   const [selectedItemKey, setSelectedItemKey] = useState<string | null>(null)
   const requestId = useRef(0)
 
   const debouncedSearchValue = useDebounce(searchValue, schematicsSearchDelay)
 
+  // Unselecting a category also drops its types
+  const setGroups = (value: Array<SchematicGroup>) => {
+    const allowedTypes = value.flatMap((group) => schematicTypesByGroup[group])
+
+    setGroupsState(value)
+    setTypes((current) => current.filter((type) => allowedTypes.includes(type)))
+  }
+
+  // Each field starts in its natural direction
+  const setSortField = (value: SchematicSortField) => {
+    setSortFieldState(value)
+    setSortDirection(schematicDefaultSortDirections[value])
+  }
+
+  const toggleSortDirection = () => {
+    setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'))
+  }
+
   const resetFilters = () => {
     setSources([])
-    setTypeGroups([])
+    setGroupsState([])
+    setTypes([])
     setRarities([])
     setSearchValue('')
   }
@@ -121,25 +148,38 @@ export function useSchematicsData() {
       sortSchematics(
         filterSchematics(overview?.items ?? [], {
           sources,
-          typeGroups,
+          groups,
+          types,
           rarities,
           search: debouncedSearchValue,
         }),
-        sortKey,
+        sortField,
+        sortDirection,
       ),
-    [overview, sources, typeGroups, rarities, debouncedSearchValue, sortKey],
+    [
+      overview,
+      sources,
+      groups,
+      types,
+      rarities,
+      debouncedSearchValue,
+      sortField,
+      sortDirection,
+    ],
   )
 
   const selectedItem =
     overview?.items.find((item) => item.itemKey === selectedItemKey) ?? null
   const hasActiveFilters =
     sources.length > 0 ||
-    typeGroups.length > 0 ||
+    groups.length > 0 ||
+    types.length > 0 ||
     rarities.length > 0 ||
     searchValue.trim().length > 0
 
   return {
     filteredItems,
+    groups,
     hasActiveFilters,
     isLoading,
     overview,
@@ -147,17 +187,20 @@ export function useSchematicsData() {
     searchValue,
     selected,
     selectedItem,
-    sortKey,
+    sortDirection,
+    sortField,
     sources,
-    typeGroups,
+    types,
 
     loadOverview,
     resetFilters,
     setRarities,
     setSearchValue,
     setSelectedItemKey,
-    setSortKey,
+    setGroups,
+    setSortField,
     setSources,
-    setTypeGroups,
+    setTypes,
+    toggleSortDirection,
   }
 }

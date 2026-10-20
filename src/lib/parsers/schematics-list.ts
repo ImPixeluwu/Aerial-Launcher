@@ -1,6 +1,7 @@
 import type {
   SchematicItem,
-  SchematicSortKey,
+  SchematicSortDirection,
+  SchematicSortField,
   SchematicsFilters,
   SchematicsOverview,
 } from '../../types/schematics'
@@ -16,18 +17,12 @@ export function createEmptySchematicsOverview(): SchematicsOverview {
   return {
     success: true,
     items: [],
-    typeCounts: {
-      assault: 0,
-      pistol: 0,
-      sniper: 0,
-      shotgun: 0,
-      smg: 0,
-      explosive: 0,
+    groupCounts: {
+      ranged: 0,
       melee: 0,
-      trap_floor: 0,
-      trap_wall: 0,
-      trap_ceiling: 0,
+      traps: 0,
     },
+    typeCounts: {},
     rarityCounts: {},
     sourceCounts: {
       campaign: 0,
@@ -36,17 +31,9 @@ export function createEmptySchematicsOverview(): SchematicsOverview {
   }
 }
 
-/**
- * Width (%) of the level bar: progress within the current tier of 10
- * levels, never below 8% so the bar stays visible.
- */
-export function schematicLevelProgress(level: number | null) {
-  return level === null ? 8 : Math.max((((level - 1) % 10) + 1) * 10, 8)
-}
-
 export function filterSchematics(
   items: Array<SchematicItem>,
-  { rarities, search, sources, typeGroups }: SchematicsFilters,
+  { groups, rarities, search, sources, types }: SchematicsFilters,
 ) {
   const needle = search.trim().toLowerCase()
 
@@ -55,9 +42,13 @@ export function filterSchematics(
       return false
     }
 
+    if (groups.length > 0 && !groups.includes(item.group)) {
+      return false
+    }
+
     if (
-      typeGroups.length > 0 &&
-      (!item.typeGroup || !typeGroups.includes(item.typeGroup))
+      types.length > 0 &&
+      (!item.filterType || !types.includes(item.filterType))
     ) {
       return false
     }
@@ -93,37 +84,27 @@ function descending(comparator: Comparator): Comparator {
 }
 
 /**
- * The sort key picks the main order and its direction; ties always fall
- * back to the highest values first, then the name.
+ * The field picks the main order; ties always fall back to the highest
+ * values first, then the name.
  */
-const comparators: Record<SchematicSortKey, Array<Comparator>> = {
-  'power-desc': [
-    descending(byPower),
-    descending(byRarity),
-    descending(byLevel),
-  ],
-  'power-asc': [byPower, descending(byRarity), descending(byLevel)],
-  'level-desc': [
-    descending(byLevel),
-    descending(byRarity),
-    descending(byPower),
-  ],
-  'level-asc': [byLevel, descending(byRarity), descending(byPower)],
-  'rarity-desc': [
-    descending(byRarity),
-    descending(byPower),
-    descending(byLevel),
-  ],
-  'rarity-asc': [byRarity, descending(byPower), descending(byLevel)],
-  'name-asc': [],
-  'name-desc': [descending(byName)],
+const comparators: Record<SchematicSortField, Array<Comparator>> = {
+  power: [byPower, descending(byRarity), descending(byLevel)],
+  level: [byLevel, descending(byRarity), descending(byPower)],
+  rarity: [byRarity, descending(byPower), descending(byLevel)],
+  name: [byName],
 }
 
 export function sortSchematics(
   items: Array<SchematicItem>,
-  sortKey: SchematicSortKey,
+  field: SchematicSortField,
+  direction: SchematicSortDirection,
 ) {
-  const sortComparators = [...comparators[sortKey], byName]
+  const [main, ...ties] = comparators[field]
+  const sortComparators = [
+    direction === 'desc' ? descending(main) : main,
+    ...ties,
+    byName,
+  ]
 
   return items.toSorted((itemA, itemB) => {
     for (const comparator of sortComparators) {

@@ -6,11 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { RarityType } from '../../config/constants/resources'
 
 import { parseSchematicsProfiles } from './schematics'
-import {
-  filterSchematics,
-  schematicLevelProgress,
-  sortSchematics,
-} from './schematics-list'
+import { filterSchematics, sortSchematics } from './schematics-list'
 import { resolveStwSchematic } from './stw-items'
 
 function item(
@@ -71,7 +67,7 @@ describe('parseSchematicsProfiles', () => {
       name: 'Sunbeam Stormblade',
       category: 'weapon',
       filterType: 'melee_sword',
-      typeGroup: 'melee',
+      group: 'melee',
       rarity: RarityType.Legendary,
       tier: 5,
       material: 'crystal',
@@ -91,7 +87,7 @@ describe('parseSchematicsProfiles', () => {
       name: 'Retractable Floor Spikes',
       category: 'trap',
       filterType: 'trap_floor',
-      typeGroup: 'trap_floor',
+      group: 'traps',
       rarity: RarityType.Rare,
       tier: 3,
     })
@@ -179,21 +175,24 @@ describe('parseSchematicsProfiles', () => {
     expect(perk).toMatchObject({ name: '+10% Damage', tier: 1 })
   })
 
-  it('counts groups by type and rarity', () => {
+  it('counts groups by category, type and rarity', () => {
     const overview = parse({
       a: item('Schematic:sid_edged_sword_medium_laser_sr_crystal_t05'),
       b: item('Schematic:sid_floor_spikes_r_t03'),
       c: item('Schematic:sid_floor_spikes_r_t03', { level: 12 }),
+      d: item('Schematic:sid_edged_axe_medium_c_ore_t01'),
     })
 
-    expect(overview.typeCounts).toMatchObject({
-      melee: 1,
+    expect(overview.groupCounts).toEqual({ ranged: 0, melee: 2, traps: 2 })
+    expect(overview.typeCounts).toEqual({
+      melee_sword: 1,
+      melee_axe: 1,
       trap_floor: 2,
-      assault: 0,
     })
     expect(overview.rarityCounts).toEqual({
       [RarityType.Legendary]: 1,
       [RarityType.Rare]: 2,
+      [RarityType.Common]: 1,
     })
   })
 })
@@ -217,16 +216,12 @@ describe('sortSchematics', () => {
       schematic({ name: 'E', powerLevel: 120, rarity: RarityType.Common }),
     ]
 
-    expect(sortSchematics(items, 'power-desc').map(({ name }) => name)).toEqual(
-      ['E', 'D', 'C', 'A', 'B'],
-    )
-    expect(sortSchematics(items, 'power-asc').map(({ name }) => name)).toEqual([
-      'D',
-      'C',
-      'A',
-      'B',
-      'E',
-    ])
+    expect(
+      sortSchematics(items, 'power', 'desc').map(({ name }) => name),
+    ).toEqual(['E', 'D', 'C', 'A', 'B'])
+    expect(
+      sortSchematics(items, 'power', 'asc').map(({ name }) => name),
+    ).toEqual(['D', 'C', 'A', 'B', 'E'])
   })
 
   it('sorts names ignoring case and accents', () => {
@@ -236,16 +231,12 @@ describe('sortSchematics', () => {
       schematic({ name: 'c' }),
     ]
 
-    expect(sortSchematics(items, 'name-asc').map(({ name }) => name)).toEqual([
-      'Á',
-      'b',
-      'c',
-    ])
-    expect(sortSchematics(items, 'name-desc').map(({ name }) => name)).toEqual([
-      'c',
-      'b',
-      'Á',
-    ])
+    expect(
+      sortSchematics(items, 'name', 'asc').map(({ name }) => name),
+    ).toEqual(['Á', 'b', 'c'])
+    expect(
+      sortSchematics(items, 'name', 'desc').map(({ name }) => name),
+    ).toEqual(['c', 'b', 'Á'])
   })
 
   it('sorts by rarity with Mythic on top', () => {
@@ -256,36 +247,68 @@ describe('sortSchematics', () => {
     ]
 
     expect(
-      sortSchematics(items, 'rarity-desc').map(({ name }) => name),
+      sortSchematics(items, 'rarity', 'desc').map(({ name }) => name),
     ).toEqual(['B', 'A', 'C'])
   })
 })
 
 describe('filterSchematics', () => {
   const items = [
-    schematic({ name: 'Sword', typeGroup: 'melee', rarity: RarityType.Epic }),
-    schematic({ name: 'Axe', typeGroup: 'melee', rarity: RarityType.Rare }),
+    schematic({
+      name: 'Sword',
+      group: 'melee',
+      filterType: 'melee_sword',
+      rarity: RarityType.Epic,
+    }),
+    schematic({
+      name: 'Axe',
+      group: 'melee',
+      filterType: 'melee_axe',
+      rarity: RarityType.Rare,
+    }),
     schematic({
       name: 'Spikes',
-      typeGroup: 'trap_floor',
+      group: 'traps',
+      filterType: 'trap_floor',
       rarity: RarityType.Epic,
       source: 'collection-book',
     }),
   ]
-  const noFilters = { sources: [], typeGroups: [], rarities: [], search: '' }
+  const noFilters = {
+    sources: [],
+    groups: [],
+    types: [],
+    rarities: [],
+    search: '',
+  }
   const names = (filtered: Array<SchematicItem>) =>
     filtered.map(({ name }) => name)
 
-  it('combines type and rarity with AND', () => {
+  it('combines category and rarity with AND', () => {
     expect(
       names(
         filterSchematics(items, {
           ...noFilters,
-          typeGroups: ['melee'],
+          groups: ['melee'],
           rarities: [RarityType.Epic],
         }),
       ),
     ).toEqual(['Sword'])
+  })
+
+  it('narrows a category down to its types', () => {
+    expect(
+      names(filterSchematics(items, { ...noFilters, groups: ['melee'] })),
+    ).toEqual(['Sword', 'Axe'])
+    expect(
+      names(
+        filterSchematics(items, {
+          ...noFilters,
+          groups: ['melee', 'traps'],
+          types: ['melee_axe', 'trap_floor'],
+        }),
+      ),
+    ).toEqual(['Axe', 'Spikes'])
   })
 
   it('filters by source and searches name and template id', () => {
@@ -300,14 +323,5 @@ describe('filterSchematics', () => {
     expect(
       filterSchematics(items, { ...noFilters, search: 'sid_floor_spikes' }),
     ).toHaveLength(3)
-  })
-})
-
-describe('schematicLevelProgress', () => {
-  it('shows the progress within the current tier', () => {
-    expect(schematicLevelProgress(1)).toBe(10)
-    expect(schematicLevelProgress(15)).toBe(50)
-    expect(schematicLevelProgress(50)).toBe(100)
-    expect(schematicLevelProgress(null)).toBe(8)
   })
 })

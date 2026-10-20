@@ -1,9 +1,9 @@
 import type { InventoryFilterType } from '../../types/inventory'
 import type {
   SchematicCategory,
+  SchematicGroup,
   SchematicItem,
   SchematicSource,
-  SchematicTypeGroup,
   SchematicsOverview,
 } from '../../types/schematics'
 import type { MCPQueryProfileStorageItem } from '../../types/services/mcp'
@@ -11,8 +11,8 @@ import type { MCPQueryProfileStorageItem } from '../../types/services/mcp'
 import { RarityType } from '../../config/constants/resources'
 
 import {
-  schematicDefaultSortKey,
-  schematicTypeGroups,
+  schematicDefaultSortDirections,
+  schematicDefaultSortField,
 } from '../../config/constants/schematics'
 
 import {
@@ -51,18 +51,15 @@ const rarityNames: Record<string, RarityType> = {
   mythic: RarityType.Mythic,
 }
 
-export function schematicTypeGroup(
+export function schematicGroup(
+  category: SchematicCategory,
   filterType: InventoryFilterType | null,
-): SchematicTypeGroup | null {
-  if (!filterType) {
-    return null
+): SchematicGroup {
+  if (category === 'trap') {
+    return 'traps'
   }
 
-  if (filterType.startsWith('melee_')) {
-    return 'melee'
-  }
-
-  return schematicTypeGroups.find((group) => group === filterType) ?? null
+  return filterType?.startsWith('melee_') ? 'melee' : 'ranged'
 }
 
 /**
@@ -173,7 +170,7 @@ function createSchematicItem(
     category,
     subType: gameItem?.subType ?? null,
     filterType,
-    typeGroup: schematicTypeGroup(filterType),
+    group: schematicGroup(category, filterType),
     rarity,
     tier,
     material: parseInventoryMaterial(id),
@@ -260,13 +257,20 @@ export function parseSchematicsProfiles({
     })
   })
 
-  overview.items = sortSchematics([...groups.values()], schematicDefaultSortKey)
+  overview.items = sortSchematics(
+    [...groups.values()],
+    schematicDefaultSortField,
+    schematicDefaultSortDirections[schematicDefaultSortField],
+  )
 
   overview.items.forEach((item) => {
     overview.sourceCounts[item.source] += 1
 
-    if (item.typeGroup) {
-      overview.typeCounts[item.typeGroup] += 1
+    overview.groupCounts[item.group] += 1
+
+    if (item.filterType) {
+      overview.typeCounts[item.filterType] =
+        (overview.typeCounts[item.filterType] ?? 0) + 1
     }
 
     if (item.rarity) {

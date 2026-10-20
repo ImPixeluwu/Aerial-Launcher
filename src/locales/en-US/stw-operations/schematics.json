@@ -7,6 +7,11 @@
     "campaign": "Campaign",
     "collection-book": "Collection Book"
   },
+  "group": {
+    "ranged": "Ranged",
+    "melee": "Melee",
+    "traps": "Traps"
+  },
   "type": {
     "assault": "Assault",
     "pistol": "Pistol",
@@ -14,7 +19,12 @@
     "shotgun": "Shotgun",
     "smg": "SMG",
     "explosive": "Explosive",
-    "melee": "Melee",
+    "melee_sword": "Sword",
+    "melee_axe": "Axe",
+    "melee_scythe": "Scythe",
+    "melee_spear": "Spear",
+    "melee_hammer": "Hardware",
+    "melee_bat": "Club",
     "trap_floor": "Floor trap",
     "trap_wall": "Wall trap",
     "trap_ceiling": "Ceiling trap"
@@ -25,14 +35,12 @@
   },
   "sort": {
     "label": "Sort by",
-    "power-desc": "Power (highest first)",
-    "power-asc": "Power (lowest first)",
-    "level-desc": "Level (highest first)",
-    "level-asc": "Level (lowest first)",
-    "name-asc": "Name (A–Z)",
-    "name-desc": "Name (Z–A)",
-    "rarity-desc": "Rarity (highest first)",
-    "rarity-asc": "Rarity (lowest first)"
+    "power": "Power",
+    "level": "Level",
+    "name": "Name",
+    "rarity": "Rarity",
+    "asc": "Ascending",
+    "desc": "Descending"
   },
   "search-placeholder": "Search by name or template ID…",
   "clear-filters": "Clear filters",

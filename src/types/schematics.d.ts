@@ -12,29 +12,13 @@ export type SchematicSource = 'campaign' | 'collection-book'
 export type SchematicCategory = 'weapon' | 'trap'
 
 /**
- * Type options of the catalog filter: every melee weapon is "melee".
+ * Category buttons of the catalog filter; each one lists its own types.
  */
-export type SchematicTypeGroup =
-  | 'assault'
-  | 'pistol'
-  | 'sniper'
-  | 'shotgun'
-  | 'smg'
-  | 'explosive'
-  | 'melee'
-  | 'trap_floor'
-  | 'trap_wall'
-  | 'trap_ceiling'
+export type SchematicGroup = 'ranged' | 'melee' | 'traps'
 
-export type SchematicSortKey =
-  | 'power-desc'
-  | 'power-asc'
-  | 'level-desc'
-  | 'level-asc'
-  | 'name-asc'
-  | 'name-desc'
-  | 'rarity-desc'
-  | 'rarity-asc'
+export type SchematicSortField = 'power' | 'level' | 'name' | 'rarity'
+
+export type SchematicSortDirection = 'asc' | 'desc'
 
 export type SchematicItem = {
   itemKey: string
@@ -46,7 +30,7 @@ export type SchematicItem = {
   category: SchematicCategory
   subType: string | null
   filterType: InventoryFilterType | null
-  typeGroup: SchematicTypeGroup | null
+  group: SchematicGroup
   rarity: RarityType | null
   tier: number | null
   material: 'ore' | 'crystal' | null
@@ -67,14 +51,16 @@ export type SchematicsOverview = {
   error?: string
   collectionBookError?: string
   items: Array<SchematicItem>
-  typeCounts: Record<SchematicTypeGroup, number>
+  groupCounts: Record<SchematicGroup, number>
+  typeCounts: Partial<Record<InventoryFilterType, number>>
   rarityCounts: Partial<Record<RarityType, number>>
   sourceCounts: Record<SchematicSource, number>
 }
 
 export type SchematicsFilters = {
   sources: Array<SchematicSource>
-  typeGroups: Array<SchematicTypeGroup>
+  groups: Array<SchematicGroup>
+  types: Array<InventoryFilterType>
   rarities: Array<RarityType>
   search: string
 }

@@ -2,16 +2,24 @@ import type { SchematicItem } from '../../../types/schematics'
 
 import { createRoute } from '@tanstack/react-router'
 import { UpdateIcon } from '@radix-ui/react-icons'
-import { BookOpen, Search, Star, X } from 'lucide-react'
+import {
+  ArrowDownWideNarrow,
+  ArrowUpNarrowWide,
+  BookOpen,
+  Search,
+  Star,
+  X,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { raritiesColor } from '../../../config/constants/resources'
 import { inventoryRarityOrder } from '../../../config/constants/inventory'
 import {
-  schematicSortKeys,
+  schematicGroups,
+  schematicSortFields,
   schematicSources,
-  schematicTypeGroups,
   schematicTypeIcons,
+  schematicTypesByGroup,
 } from '../../../config/constants/schematics'
 
 import { Route as RootRoute } from '../../__root'
@@ -50,7 +58,6 @@ import {
 
 import { useSchematicsData } from './-hooks'
 
-import { schematicLevelProgress } from '../../../lib/parsers/schematics-list'
 import { assets } from '../../../lib/repository'
 import { cn } from '../../../lib/utils'
 
@@ -89,6 +96,7 @@ function Content() {
 
   const {
     filteredItems,
+    groups,
     hasActiveFilters,
     isLoading,
     overview,
@@ -96,18 +104,21 @@ function Content() {
     searchValue,
     selected,
     selectedItem,
-    sortKey,
+    sortDirection,
+    sortField,
     sources,
-    typeGroups,
+    types,
 
     loadOverview,
     resetFilters,
     setRarities,
     setSearchValue,
     setSelectedItemKey,
-    setSortKey,
+    setGroups,
+    setSortField,
     setSources,
-    setTypeGroups,
+    setTypes,
+    toggleSortDirection,
   } = useSchematicsData()
 
   if (!selected) {
@@ -129,9 +140,13 @@ function Content() {
     }
   }
 
-  const availableTypeGroups = schematicTypeGroups.filter(
-    (typeGroup) => (overview?.typeCounts[typeGroup] ?? 0) > 0,
+  const availableGroups = schematicGroups.filter(
+    (group) => (overview?.groupCounts[group] ?? 0) > 0,
   )
+  const availableTypes = groups
+    .flatMap((group) => schematicTypesByGroup[group])
+    .filter((type) => (overview?.typeCounts[type] ?? 0) > 0)
+  const sortDirectionLabel = t(`schematics.sort.${sortDirection}`)
   const availableRarities = inventoryRarityOrder.filter(
     (rarity) => (overview?.rarityCounts[rarity] ?? 0) > 0,
   )
@@ -143,27 +158,40 @@ function Content() {
           {t('schematics.subtitle')}
         </p>
         <Select
-          value={sortKey}
-          onValueChange={(value) => setSortKey(value as typeof sortKey)}
+          value={sortField}
+          onValueChange={(value) => setSortField(value as typeof sortField)}
         >
           <SelectTrigger
-            className="w-56"
+            className="w-40"
             aria-label={t('schematics.sort.label')}
             title={t('schematics.sort.label')}
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {schematicSortKeys.map((key) => (
+            {schematicSortFields.map((field) => (
               <SelectItem
-                key={key}
-                value={key}
+                key={field}
+                value={field}
               >
-                {t(`schematics.sort.${key}`)}
+                {t(`schematics.sort.${field}`)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={toggleSortDirection}
+          aria-label={sortDirectionLabel}
+          title={sortDirectionLabel}
+        >
+          {sortDirection === 'desc' ? (
+            <ArrowDownWideNarrow className="size-4" />
+          ) : (
+            <ArrowUpNarrowWide className="size-4" />
+          )}
+        </Button>
         <Button
           size="icon"
           variant="outline"
@@ -195,22 +223,21 @@ function Content() {
           ))}
         </ToggleGroup>
 
-        {availableTypeGroups.length > 0 && (
+        {availableGroups.length > 0 && (
           <ToggleGroup
             type="multiple"
             variant="outline"
-            className="flex-wrap justify-start"
-            value={typeGroups}
-            onValueChange={(value) => setTypeGroups(value as typeof typeGroups)}
+            value={groups}
+            onValueChange={(value) => setGroups(value as typeof groups)}
           >
-            {availableTypeGroups.map((typeGroup) => (
+            {availableGroups.map((group) => (
               <ToggleGroupItem
-                key={typeGroup}
-                value={typeGroup}
+                key={group}
+                value={group}
               >
-                {t(`schematics.type.${typeGroup}`)}
+                {t(`schematics.group.${group}`)}
                 <span className="ml-1 text-muted-foreground">
-                  {overview?.typeCounts[typeGroup] ?? 0}
+                  {overview?.groupCounts[group] ?? 0}
                 </span>
               </ToggleGroupItem>
             ))}
@@ -260,6 +287,28 @@ function Content() {
           {t('schematics.clear-filters')}
         </Button>
       </div>
+
+      {availableTypes.length > 0 && (
+        <ToggleGroup
+          type="multiple"
+          variant="outline"
+          className="flex-wrap justify-start"
+          value={types}
+          onValueChange={(value) => setTypes(value as typeof types)}
+        >
+          {availableTypes.map((type) => (
+            <ToggleGroupItem
+              key={type}
+              value={type}
+            >
+              {t(`schematics.type.${type}`)}
+              <span className="ml-1 text-muted-foreground">
+                {overview?.typeCounts[type] ?? 0}
+              </span>
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      )}
 
       <div className="flex flex-wrap justify-between gap-x-4 text-sm text-muted-foreground">
         <span>
@@ -354,8 +403,8 @@ function SchematicCard({
   onSelect: () => void
 }) {
   const { t } = useTranslation(['stw-operations'])
-  const typeIcon = item.typeGroup
-    ? assets(schematicTypeIcons[item.typeGroup])
+  const typeIcon = item.filterType
+    ? assets(schematicTypeIcons[item.filterType])
     : null
 
   return (
@@ -378,11 +427,11 @@ function SchematicCard({
             className="absolute top-0 left-0"
           />
         )}
-        {typeIcon && item.typeGroup && (
+        {typeIcon && item.filterType && (
           <img
             src={typeIcon}
-            alt={t(`schematics.type.${item.typeGroup}`)}
-            title={t(`schematics.type.${item.typeGroup}`)}
+            alt={t(`schematics.type.${item.filterType}`)}
+            title={t(`schematics.type.${item.filterType}`)}
             className="absolute top-0 right-0 size-5 rounded bg-black/70 p-0.5"
             draggable={false}
           />
@@ -402,12 +451,13 @@ function SchematicCard({
         )}
       </div>
       <SchematicStars item={item} />
-      <span className="h-1 w-full overflow-hidden rounded bg-black/40">
-        <span
-          className="block h-full bg-sky-400"
-          style={{ width: `${schematicLevelProgress(item.level)}%` }}
-        />
-      </span>
+      {item.level !== null && (
+        <span className="text-xs text-muted-foreground">
+          {item.maxLevel !== null
+            ? t('inventory.level-of', { level: item.level, max: item.maxLevel })
+            : t('inventory.level-short', { level: item.level })}
+        </span>
+      )}
       <span className="w-full text-center text-xs leading-tight line-clamp-2">
         {item.name}
       </span>
