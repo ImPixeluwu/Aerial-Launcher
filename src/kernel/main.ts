@@ -13,6 +13,7 @@ import type { AlertsDoneSearchPlayerConfig } from '../types/alerts'
 import type { AuthenticationByDeviceProperties } from '../types/authentication'
 import type { AutomationServiceActionConfig } from '../types/automation'
 import type { GroupRecord } from '../types/groups'
+import type { InventoryProfileId } from '../types/inventory'
 import type { CustomizableMenuSettings, Settings } from '../types/settings'
 import type { TagRecord } from '../types/tags'
 import type { TaxiServiceServiceActionConfig } from '../types/taxi-service'
@@ -39,6 +40,7 @@ import { Authentication } from './core/authentication'
 import { ClaimRewards } from './core/claim-rewards'
 import { DevicesAuthManager } from './core/devices-auth'
 import { EULATracking } from './core/eula-tracking'
+import { Inventory } from './core/inventory'
 import { FortniteLauncher } from './core/launcher'
 import {
   MCPClientQuestLogin,
@@ -226,6 +228,13 @@ const gotTheLock = app.requestSingleInstanceLock()
       ElectronAPIEventKeys.UpdateSettings,
       async (_, settings: Settings) => {
         await SettingsManager.update(settings)
+      },
+    )
+
+    ipcMain.handle(
+      ElectronAPIEventKeys.InventoryGetOverview,
+      (_, account: AccountData, profileId: InventoryProfileId) => {
+        return Inventory.getOverview(account, profileId)
       },
     )
 
