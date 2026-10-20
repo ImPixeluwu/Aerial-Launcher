@@ -1,6 +1,6 @@
 # SPEC — Catálogo de esquemas de Salvar el Mundo
 
-Estado: v2 · Alcance: solo lectura (no modifica el perfil del jugador).
+Estado: v3 · Alcance: solo lectura (no modifica el perfil del jugador).
 
 Este documento describe **comportamiento**, no código. Parte de
 `schematics/NOTES.md` (lectura estática del catálogo de esquemas de GLOW
@@ -228,6 +228,11 @@ las perks].
   sesión del renderer; volver a la página dentro de ese tiempo no llama a Epic.
   El botón de recargar la ignora. La clave no incluye el idioma porque los
   nombres no se traducen [DECISIÓN].
+- Disposición [DECISIÓN del usuario, v3]: subtítulo y nota del inglés; fila
+  con búsqueda, orden, dirección y recargar; después una fila por filtro
+  con su etiqueta (Origen, Categoría y sus tipos, Rareza). Cada fila se
+  ajusta solo por dentro y los contadores usan cifras de ancho fijo, así
+  que los números de 3-4 dígitos no recolocan los demás filtros.
 - Filtros [CONFIRMADO salvo origen]:
   - **Origen** (multiselección: Campaña, Libro de colección, con contador).
     Sin nada marcado se ven los dos [DECISIÓN del usuario].
@@ -258,9 +263,18 @@ las perks].
   - El orden se conserva al cambiar de cuenta; los filtros se reinician
     [DECISIÓN].
 - Contador "N esquemas mostrados", lista sin agrupar [CONFIRMADO].
-- La cuadrícula no se virtualiza [DECISIÓN: una cuenta tiene del orden de
-  cientos de esquemas y las imágenes cargan en diferido, como en el
-  inventario].
+- La cuadrícula se virtualiza () [DECISIÓN del
+  usuario, v3; GLOW también la virtualiza, CONFIRMADO]: los veteranos tienen
+  miles de esquemas y dibujarlos todos congelaba la ventana (2.000
+  esquemas: 2.002 cartas en el DOM y 0,6–2,8 s por clic en un filtro; con
+  virtualización, 20–50 cartas y ~30–50 ms). Las cartas tienen altura fija;
+  las columnas salen del ancho (mínimo 7,5 rem); la cuadrícula se pinta en
+  diferido () para que los botones respondan al momento.
+  Al cambiar filtros u orden se vuelve al principio de la lista, y al
+  recorrer la ficha con ← → la lista sigue al esquema abierto.
+   se valoró y se descartó: mide texto de altura variable
+  sin reflow, pero aquí la altura es fija y el coste era el número de
+  nodos.
 - **Carta** [CONFIRMADO salvo origen]: color según la rareza; imagen; PL si es
   mayor que 0; cantidad si es mayor que 1 (formato del inventario); insignia
   del tipo; marca de libro de colección si viene de ahí [DECISIÓN]; cinco
@@ -287,7 +301,6 @@ las perks].
 - **Nombres traducidos**: GLOW los pide localizados a su backend; aquí están en
   inglés (como el inventario).
 - **Iconos**: los de PegLeg del objeto que fabrica, no los de GLOW.
-- **Cuadrícula virtualizada**: no (§7).
 - **Forma de los objetos del libro**: se asume que guardan `templateId`,
   `attributes.level` y `attributes.alterations` como los de campaña
   [INFERIDO]; si faltan, se ven sin nivel ni perks.
