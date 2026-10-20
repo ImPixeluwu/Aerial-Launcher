@@ -33,7 +33,7 @@ función se desarrolla en su propia sesión; empieza leyendo esto y luego el
    fijado y el crédito en `src/routes/information/credits/route.tsx`.
 5. Textos de interfaz en `en-US` y `es-419`; el resto de idiomas cae a inglés.
 6. Las respuestas al usuario van en español.
-7. Mensajes de commit en inglés, **sin línea `Co-Authored-By`**. No se abre PR
+7. Mensajes de commit en inglés, **sin líneas `Co-Authored-By` ni `Claude-Session`**. No se abre PR
    salvo que el usuario lo pida.
 8. PR solo de código, sin mencionar a GLOW, fusionado con "Squash and merge".
    Al hacer squash, GitHub añade líneas `Co-authored-by` al mensaje; bórralas
@@ -43,7 +43,7 @@ función se desarrolla en su propia sesión; empieza leyendo esto y luego el
 
 | Función | Estado | Documentos |
 |---|---|---|
-| Visor de inventario | Hecho; pendiente de volver a fusionar en `main` con squash (rama `claude/trusting-brown-eh073r`) | `inventory/SPEC.md` |
+| Visor de inventario | Hecho; PR ImPixeluwu/Aerial-Launcher#3 (squash) | `inventory/SPEC.md` |
 | Catálogo de esquemas | Pendiente | `schematics/NOTES.md` |
 | Visor de Homebase | Pendiente | `homebase/NOTES.md` |
 | Libro de colección | Pendiente | `collection-book/NOTES.md` |

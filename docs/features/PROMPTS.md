@@ -40,7 +40,7 @@ Después:
    comentarios, commits o PR.
 6. Verifica como dice la §6 de la guía: npm test, npm run lint, el recuento
    de tsc (base 410) y npx electron-forge package.
-7. Commits en inglés, sin línea Co-Authored-By. No abras PR hasta que te lo
+7. Commits en inglés, sin líneas Co-Authored-By ni Claude-Session. No abras PR hasta que te lo
    pida.
 
 Respóndeme en español.
@@ -75,7 +75,7 @@ Después:
      el scratchpad, en los commits de `src/data/stw/source.json`.
 6. Verifica como dice la §6 de la guía: npm test, npm run lint, el recuento
    de tsc (base 410) y npx electron-forge package.
-7. Commits en inglés, sin línea Co-Authored-By. No abras PR hasta que te lo
+7. Commits en inglés, sin líneas Co-Authored-By ni Claude-Session. No abras PR hasta que te lo
    pida.
 
 Respóndeme en español.
@@ -113,7 +113,7 @@ Después:
    `src/routes/stw-operations/party/`.
 6. Verifica como dice la §6 de la guía: npm test, npm run lint, el recuento
    de tsc (base 410) y npx electron-forge package.
-7. Commits en inglés, sin línea Co-Authored-By. No abras PR hasta que te lo
+7. Commits en inglés, sin líneas Co-Authored-By ni Claude-Session. No abras PR hasta que te lo
    pida.
 
 Respóndeme en español.
@@ -150,7 +150,7 @@ Después:
    comentarios, commits o PR.
 6. Verifica como dice la §6 de la guía: npm test, npm run lint, el recuento
    de tsc (base 410) y npx electron-forge package.
-7. Commits en inglés, sin línea Co-Authored-By. No abras PR hasta que te lo
+7. Commits en inglés, sin líneas Co-Authored-By ni Claude-Session. No abras PR hasta que te lo
    pida.
 
 Respóndeme en español.
