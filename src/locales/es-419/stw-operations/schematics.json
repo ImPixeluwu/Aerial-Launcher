@@ -1,0 +1,65 @@
+{
+  "no-account": "Selecciona una cuenta para ver sus esquemas.",
+  "reload": "Recargar",
+  "subtitle": "Esquemas de armas y trampas de tu perfil de campaña y de tu libro de colección.",
+  "english-note": "Los nombres de objetos y perks se muestran en inglés, como en los datos del juego.",
+  "filter": {
+    "source": "Origen",
+    "category": "Categoría",
+    "rarity": "Rareza"
+  },
+  "source": {
+    "campaign": "Campaña",
+    "collection-book": "Libro de colección"
+  },
+  "group": {
+    "ranged": "A distancia",
+    "melee": "Cuerpo a cuerpo",
+    "traps": "Trampas"
+  },
+  "type": {
+    "assault": "Asalto",
+    "pistol": "Pistola",
+    "sniper": "Francotirador",
+    "shotgun": "Escopeta",
+    "smg": "Subfusil",
+    "explosive": "Explosivo",
+    "melee_sword": "Espada",
+    "melee_axe": "Hacha",
+    "melee_scythe": "Guadaña",
+    "melee_spear": "Lanza",
+    "melee_hammer": "Martillo",
+    "melee_bat": "Garrote",
+    "trap_floor": "Trampa de suelo",
+    "trap_wall": "Trampa de pared",
+    "trap_ceiling": "Trampa de techo"
+  },
+  "category": {
+    "weapon": "Arma",
+    "trap": "Trampa"
+  },
+  "sort": {
+    "label": "Ordenar por",
+    "power": "Poder",
+    "level": "Nivel",
+    "name": "Nombre",
+    "rarity": "Rareza",
+    "asc": "Ascendente",
+    "desc": "Descendente"
+  },
+  "search-placeholder": "Buscar por nombre o ID de plantilla…",
+  "clear-filters": "Limpiar filtros",
+  "items-shown_one": "{{count}} esquema mostrado",
+  "items-shown_other": "{{count}} esquemas mostrados",
+  "load-failed": "No se pudieron cargar los esquemas",
+  "collection-book-failed": "No se pudo leer el libro de colección; solo se muestran los esquemas de campaña",
+  "no-matches": "Ningún esquema coincide con los filtros.",
+  "view-details": "Ver detalles",
+  "supercharged_one": "{{count}} supercarga",
+  "supercharged_other": "{{count}} supercargas",
+  "prop": {
+    "source": "Origen",
+    "supercharge": "Supercarga",
+    "item-template": "Objeto fabricado"
+  }
+}

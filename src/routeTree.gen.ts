@@ -17,6 +17,7 @@ import { Route as StwOperationsXpboostsRouteImport } from './routes/stw-operatio
 import { Route as StwOperationsUrnsRouteImport } from './routes/stw-operations/urns/route'
 import { Route as StwOperationsUnlockRouteImport } from './routes/stw-operations/unlock/route'
 import { Route as StwOperationsTaxiServiceRouteImport } from './routes/stw-operations/taxi-service/route'
+import { Route as StwOperationsSchematicsRouteImport } from './routes/stw-operations/schematics/route'
 import { Route as StwOperationsSaveQuestsRouteImport } from './routes/stw-operations/save-quests/route'
 import { Route as StwOperationsPartyRouteImport } from './routes/stw-operations/party/route'
 import { Route as StwOperationsInventoryRouteImport } from './routes/stw-operations/inventory/route'
@@ -67,6 +68,12 @@ const StwOperationsUnlockRouteRoute = StwOperationsUnlockRouteImport.update({
 const StwOperationsTaxiServiceRouteRoute =
   StwOperationsTaxiServiceRouteImport.update({
     path: '/stw-operations/taxi-service',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const StwOperationsSchematicsRouteRoute =
+  StwOperationsSchematicsRouteImport.update({
+    path: '/stw-operations/schematics',
     getParentRoute: () => rootRoute,
   } as any)
 
@@ -246,6 +253,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsSaveQuestsRouteImport
       parentRoute: typeof rootRoute
     }
+    '/stw-operations/schematics': {
+      preLoaderRoute: typeof StwOperationsSchematicsRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/taxi-service': {
       preLoaderRoute: typeof StwOperationsTaxiServiceRouteImport
       parentRoute: typeof rootRoute
@@ -290,6 +301,7 @@ export const routeTree = rootRoute.addChildren([
   StwOperationsInventoryRouteRoute,
   StwOperationsPartyRouteRoute,
   StwOperationsSaveQuestsRouteRoute,
+  StwOperationsSchematicsRouteRoute,
   StwOperationsTaxiServiceRouteRoute,
   StwOperationsUnlockRouteRoute,
   StwOperationsUrnsRouteRoute,

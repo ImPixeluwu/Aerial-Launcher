@@ -60,6 +60,7 @@ export const customizableMenuSettingsSchema = z
     dailyQuests: z.boolean().default(true),
     homebaseName: z.boolean().default(true),
     inventory: z.boolean().default(true),
+    schematics: z.boolean().default(true),
     xpBoosts: z.boolean().default(true),
     autoPinUrns: z.boolean().default(true),
     autoLlamas: z.boolean().default(true),

@@ -13,6 +13,7 @@ import enUS_stwOperations_AutoKick from './en-US/stw-operations/auto-kick.json'
 import enUS_stwOperations_TaxiService from './en-US/stw-operations/taxi-service.json'
 import enUS_stwOperations_HomebaseName from './en-US/stw-operations/homebase-name.json'
 import enUS_stwOperations_Inventory from './en-US/stw-operations/inventory.json'
+import enUS_stwOperations_Schematics from './en-US/stw-operations/schematics.json'
 import enUS_stwOperations_SaveQuests from './en-US/stw-operations/save-quests.json'
 import enUS_stwOperations_DailyQuests from './en-US/stw-operations/daily-quests.json'
 import enUS_stwOperations_Party from './en-US/stw-operations/party.json'
@@ -45,6 +46,7 @@ const enUS = {
     'taxi-service': enUS_stwOperations_TaxiService,
     'homebase-name': enUS_stwOperations_HomebaseName,
     inventory: enUS_stwOperations_Inventory,
+    schematics: enUS_stwOperations_Schematics,
     'save-quests': enUS_stwOperations_SaveQuests,
     'daily-quests': enUS_stwOperations_DailyQuests,
     party: enUS_stwOperations_Party,
@@ -86,6 +88,7 @@ import es419_stwOperations_AutoKick from './es-419/stw-operations/auto-kick.json
 import es419_stwOperations_TaxiService from './es-419/stw-operations/taxi-service.json'
 import es419_stwOperations_HomebaseName from './es-419/stw-operations/homebase-name.json'
 import es419_stwOperations_Inventory from './es-419/stw-operations/inventory.json'
+import es419_stwOperations_Schematics from './es-419/stw-operations/schematics.json'
 import es419_stwOperations_SaveQuests from './es-419/stw-operations/save-quests.json'
 import es419_stwOperations_DailyQuests from './es-419/stw-operations/daily-quests.json'
 import es419_stwOperations_Party from './es-419/stw-operations/party.json'
@@ -118,6 +121,7 @@ const es419 = {
     'taxi-service': es419_stwOperations_TaxiService,
     'homebase-name': es419_stwOperations_HomebaseName,
     inventory: es419_stwOperations_Inventory,
+    schematics: es419_stwOperations_Schematics,
     'save-quests': es419_stwOperations_SaveQuests,
     'daily-quests': es419_stwOperations_DailyQuests,
     party: es419_stwOperations_Party,

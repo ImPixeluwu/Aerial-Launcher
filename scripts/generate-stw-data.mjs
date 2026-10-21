@@ -1,5 +1,6 @@
 /**
- * Builds the compact Save the World item data used by the inventory viewer.
+ * Builds the compact Save the World item data used by the inventory viewer
+ * and the schematics catalog.
  *
  * Sources:
  * - PegLegFN/PegLegResources (https://github.com/PegLegFN/PegLegResources)
@@ -285,6 +286,38 @@ simpleKinds.forEach(([file, kind]) => {
   )
 })
 
+/**
+ * Schematic -> the weapon or trap it crafts. Almost all of them follow
+ * "sid_X" -> "wid_X" (or "tid_X" for traps), so only the exceptions are
+ * stored.
+ */
+const schematics = {}
+
+Object.entries(readJson(path.join(namedItemsDir, 'Schematic.json'))).forEach(
+  ([templateId, entry]) => {
+    const result = entry.CraftingResult?.toLowerCase()
+
+    // Ammo and ingredient schematics are not weapons or traps
+    if (!result || !/^(weapon|trap):/.test(result)) {
+      return
+    }
+
+    if (!items[result]) {
+      throw new Error(`${templateId} crafts unknown item ${result}`)
+    }
+
+    const schematicId = templateId.toLowerCase()
+    const id = schematicId.split(':')[1].replace(/^sid_/, '')
+    const byRule = [`weapon:wid_${id}`, `trap:tid_${id}`].find(
+      (candidate) => items[candidate],
+    )
+
+    if (byRule !== result) {
+      schematics[schematicId] = result
+    }
+  },
+)
+
 // Perk modifiers that change the stats shown in the item details
 const statAttributes = new Set([
   'OutgoingAbilityDamage',
@@ -393,6 +426,10 @@ writeFileSync(
   `${JSON.stringify({ descriptions, items })}\n`,
 )
 writeFileSync(
+  path.join(outputDir, 'schematics.json'),
+  `${JSON.stringify(schematics, null, 2)}\n`,
+)
+writeFileSync(
   path.join(outputDir, 'alterations.json'),
   `${JSON.stringify(alterations)}\n`,
 )
@@ -424,5 +461,5 @@ writeFileSync(
 )
 
 console.log(
-  `items: ${Object.keys(items).length}, alterations: ${Object.keys(alterations).length}, legacy alterations: ${Object.keys(legacyAlterations).length}, descriptions: ${descriptions.length}, commit: ${commit}`,
+  `items: ${Object.keys(items).length}, schematic exceptions: ${Object.keys(schematics).length}, alterations: ${Object.keys(alterations).length}, legacy alterations: ${Object.keys(legacyAlterations).length}, descriptions: ${descriptions.length}, commit: ${commit}`,
 )

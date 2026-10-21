@@ -13,6 +13,7 @@ import alterationsJson from '../../data/stw/alterations.json'
 import itemRatingsJson from '../../data/stw/item-ratings.json'
 import itemsJson from '../../data/stw/items.json'
 import legacyAlterationsJson from '../../data/stw/legacy-alterations.json'
+import schematicsJson from '../../data/stw/schematics.json'
 import sourceJson from '../../data/stw/source.json'
 
 /**
@@ -59,6 +60,7 @@ const alterations = alterationsJson as unknown as Record<
 >
 const itemRatings = itemRatingsJson as Record<string, StwRatingTier>
 const legacyAlterations = legacyAlterationsJson as Record<string, Array<string>>
+const schematicExceptions = schematicsJson as Record<string, string>
 
 const rarityCodes = new Set<string>(Object.values(RarityType))
 
@@ -123,6 +125,25 @@ export function findStwItem(templateId: string) {
     baseStats: record.b ?? null,
     scaling: record.x ?? null,
   }
+}
+
+/**
+ * Template id of the weapon or trap a schematic crafts, in lower case:
+ * "Schematic:sid_X" -> "weapon:wid_X" or "trap:tid_X", except for the few
+ * schematics listed in the game data with a different result. Null when
+ * the item is not in the game data.
+ */
+export function resolveStwSchematic(templateId: string) {
+  const schematicId = templateId.toLowerCase()
+  const id = schematicId.replace(/^schematic:/, '').replace(/^sid_/, '')
+
+  return (
+    schematicExceptions[schematicId] ??
+    [`weapon:wid_${id}`, `trap:tid_${id}`].find(
+      (candidate) => items[candidate],
+    ) ??
+    null
+  )
 }
 
 function findAlterationRecord(id: string) {

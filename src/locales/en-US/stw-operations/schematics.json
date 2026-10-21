@@ -1,0 +1,65 @@
+{
+  "no-account": "Select an account to view its schematics.",
+  "reload": "Reload",
+  "subtitle": "Weapon and trap schematics from your campaign profile and your collection book.",
+  "english-note": "Item and perk names are shown in English, as in the game data.",
+  "filter": {
+    "source": "Source",
+    "category": "Category",
+    "rarity": "Rarity"
+  },
+  "source": {
+    "campaign": "Campaign",
+    "collection-book": "Collection Book"
+  },
+  "group": {
+    "ranged": "Ranged",
+    "melee": "Melee",
+    "traps": "Traps"
+  },
+  "type": {
+    "assault": "Assault",
+    "pistol": "Pistol",
+    "sniper": "Sniper",
+    "shotgun": "Shotgun",
+    "smg": "SMG",
+    "explosive": "Explosive",
+    "melee_sword": "Sword",
+    "melee_axe": "Axe",
+    "melee_scythe": "Scythe",
+    "melee_spear": "Spear",
+    "melee_hammer": "Hardware",
+    "melee_bat": "Club",
+    "trap_floor": "Floor trap",
+    "trap_wall": "Wall trap",
+    "trap_ceiling": "Ceiling trap"
+  },
+  "category": {
+    "weapon": "Weapon",
+    "trap": "Trap"
+  },
+  "sort": {
+    "label": "Sort by",
+    "power": "Power",
+    "level": "Level",
+    "name": "Name",
+    "rarity": "Rarity",
+    "asc": "Ascending",
+    "desc": "Descending"
+  },
+  "search-placeholder": "Search by name or template ID…",
+  "clear-filters": "Clear filters",
+  "items-shown_one": "{{count}} schematic shown",
+  "items-shown_other": "{{count}} schematics shown",
+  "load-failed": "Could not load the schematics",
+  "collection-book-failed": "Could not read the collection book; only campaign schematics are shown",
+  "no-matches": "No schematics match your filters.",
+  "view-details": "View details",
+  "supercharged_one": "{{count}} supercharge",
+  "supercharged_other": "{{count}} supercharges",
+  "prop": {
+    "source": "Source",
+    "supercharge": "Supercharge",
+    "item-template": "Crafted item"
+  }
+}

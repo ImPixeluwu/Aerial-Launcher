@@ -51,6 +51,7 @@ import { MatchmakingTrack } from './core/matchmaking-track'
 import { Manifest } from './core/manifest'
 import { Party } from './core/party'
 import { RedeemCodes } from './core/redeem-codes'
+import { Schematics } from './core/schematics'
 import { Unlock } from './core/unlock'
 import { VBucksInformation } from './core/vbucks-information'
 import { WorldInfoManager } from './core/world-info'
@@ -235,6 +236,13 @@ const gotTheLock = app.requestSingleInstanceLock()
       ElectronAPIEventKeys.InventoryGetOverview,
       (_, account: AccountData, profileId: InventoryProfileId) => {
         return Inventory.getOverview(account, profileId)
+      },
+    )
+
+    ipcMain.handle(
+      ElectronAPIEventKeys.SchematicsGetOverview,
+      (_, account: AccountData) => {
+        return Schematics.getOverview(account)
       },
     )
 

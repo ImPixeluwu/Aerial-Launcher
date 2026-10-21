@@ -1,0 +1,22 @@
+{
+  "schematic:sid_launcher_grenade_winter_sr_ore_t01": "weapon:wid_launcher_wintergrenade_sr_ore_t01",
+  "schematic:sid_launcher_grenade_winter_sr_ore_t02": "weapon:wid_launcher_wintergrenade_sr_ore_t02",
+  "schematic:sid_launcher_grenade_winter_sr_ore_t03": "weapon:wid_launcher_wintergrenade_sr_ore_t03",
+  "schematic:sid_launcher_grenade_winter_sr_ore_t04": "weapon:wid_launcher_wintergrenade_sr_ore_t04",
+  "schematic:sid_launcher_grenade_winter_sr_ore_t05": "weapon:wid_launcher_wintergrenade_sr_ore_t05",
+  "schematic:sid_ob_assault_auto_t03": "weapon:wid_assault_auto_c_ore_t01",
+  "schematic:sid_pistol_vacuumtube_auto_sr_crystal_t04": "weapon:wid_pistol_auto_vacuumtube_sr_crystal_t04",
+  "schematic:sid_pistol_vacuumtube_auto_sr_crystal_t05": "weapon:wid_pistol_auto_vacuumtube_sr_crystal_t05",
+  "schematic:sid_pistol_vacuumtube_auto_sr_ore_t01": "weapon:wid_pistol_auto_vacuumtube_sr_ore_t01",
+  "schematic:sid_pistol_vacuumtube_auto_sr_ore_t02": "weapon:wid_pistol_auto_vacuumtube_sr_ore_t02",
+  "schematic:sid_pistol_vacuumtube_auto_sr_ore_t03": "weapon:wid_pistol_auto_vacuumtube_sr_ore_t03",
+  "schematic:sid_pistol_vacuumtube_auto_sr_ore_t04": "weapon:wid_pistol_auto_vacuumtube_sr_ore_t04",
+  "schematic:sid_pistol_vacuumtube_auto_sr_ore_t05": "weapon:wid_pistol_auto_vacuumtube_sr_ore_t05",
+  "schematic:sid_pistol_vacuumtube_auto_vr_crystal_t04": "weapon:wid_pistol_auto_vacuumtube_vr_crystal_t04",
+  "schematic:sid_pistol_vacuumtube_auto_vr_crystal_t05": "weapon:wid_pistol_auto_vacuumtube_vr_crystal_t05",
+  "schematic:sid_pistol_vacuumtube_auto_vr_ore_t01": "weapon:wid_pistol_auto_vacuumtube_vr_ore_t01",
+  "schematic:sid_pistol_vacuumtube_auto_vr_ore_t02": "weapon:wid_pistol_auto_vacuumtube_vr_ore_t02",
+  "schematic:sid_pistol_vacuumtube_auto_vr_ore_t03": "weapon:wid_pistol_auto_vacuumtube_vr_ore_t03",
+  "schematic:sid_pistol_vacuumtube_auto_vr_ore_t04": "weapon:wid_pistol_auto_vacuumtube_vr_ore_t04",
+  "schematic:sid_pistol_vacuumtube_auto_vr_ore_t05": "weapon:wid_pistol_auto_vacuumtube_vr_ore_t05"
+}
