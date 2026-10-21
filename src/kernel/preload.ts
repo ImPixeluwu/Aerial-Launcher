@@ -12,12 +12,14 @@ import * as automationsActions from './preload-actions/automation'
 import * as customizableMenuActions from './preload-actions/customizable-menu'
 import * as devicesAuthActions from './preload-actions/devices-auth'
 import * as eventActions from './preload-actions/events'
+import * as friendsActions from './preload-actions/friends'
 import * as generalActions from './preload-actions/general'
 import * as inventoryActions from './preload-actions/inventory'
 import * as launcherActions from './preload-actions/launcher'
 import * as matchmakingActions from './preload-actions/matchmaking'
 import * as mcpActions from './preload-actions/mcp'
 import * as partyActions from './preload-actions/party'
+import * as partyInfoActions from './preload-actions/party-info'
 import * as redeemCodesActions from './preload-actions/redeem-codes'
 import * as requestActions from './preload-actions/requests'
 import * as scheduleActions from './preload-actions/schedules'
@@ -38,10 +40,12 @@ export const availableElectronAPIs = {
   ...autoPinUrnsActions,
   ...devicesAuthActions,
   ...eventActions,
+  ...friendsActions,
   ...generalActions,
   ...inventoryActions,
   ...launcherActions,
   ...partyActions,
+  ...partyInfoActions,
   ...redeemCodesActions,
   ...schematicsActions,
   ...matchmakingActions,

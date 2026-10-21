@@ -1,0 +1,103 @@
+{
+  "subtitle": "Amigos y solicitudes de amistad de Epic Games de la cuenta seleccionada.",
+  "no-account": "Selecciona una cuenta para ver sus amigos",
+  "reload": "Recargar",
+  "player": "Jugador",
+  "load-failed": "No se pudieron cargar los amigos",
+  "retry": "Reintentar",
+  "tabs": {
+    "friends": "Amigos",
+    "incoming": "Recibidas",
+    "outgoing": "Enviadas",
+    "blocked": "Bloqueados"
+  },
+  "search": {
+    "placeholder": "Buscar por nombre o ID de cuenta",
+    "clear": "Limpiar búsqueda",
+    "shown": "{{shown}} de {{total}}"
+  },
+  "empty": {
+    "friends": "Esta cuenta todavía no tiene amigos",
+    "incoming": "No hay solicitudes recibidas",
+    "outgoing": "No hay solicitudes enviadas",
+    "blocked": "No hay jugadores bloqueados",
+    "no-matches": "Ningún jugador coincide con la búsqueda"
+  },
+  "add": {
+    "placeholder": "Nombre o ID de cuenta",
+    "submit": "Enviar solicitud",
+    "success": "Solicitud de amistad enviada a {{name}}"
+  },
+  "copy-id": "Copiar ID de cuenta",
+  "copied": "ID de cuenta copiado",
+  "actions": {
+    "accept": "Aceptar",
+    "reject": "Rechazar",
+    "cancel": "Cancelar",
+    "remove": "Quitar",
+    "block": "Bloquear",
+    "unblock": "Desbloquear"
+  },
+  "results": {
+    "accept": "Solicitud de {{name}} aceptada",
+    "reject": "Solicitud de {{name}} rechazada",
+    "cancel": "Solicitud a {{name}} cancelada",
+    "remove": "{{name}} ya no está en tus amigos",
+    "block": "{{name}} fue bloqueado",
+    "unblock": "{{name}} fue desbloqueado",
+    "error": "Error: {{error}}"
+  },
+  "confirm": {
+    "keep": "Volver",
+    "reject": {
+      "title": "¿Rechazar la solicitud?",
+      "description": "Se eliminará la solicitud de {{name}}."
+    },
+    "cancel": {
+      "title": "¿Cancelar la solicitud?",
+      "description": "Se eliminará la solicitud enviada a {{name}}."
+    },
+    "remove": {
+      "title": "¿Quitar de amigos?",
+      "description": "{{name}} dejará de ser amigo de {{account}} en Epic Games."
+    },
+    "block": {
+      "title": "¿Bloquear al jugador?",
+      "description": "{{name}} se quitará de amigos y solicitudes y quedará bloqueado en {{account}}. Puedes desbloquearlo después desde la pestaña Bloqueados."
+    }
+  },
+  "bulk": {
+    "remove": "Quitar todos",
+    "accept": "Aceptar todas",
+    "reject": "Rechazar todas",
+    "cancel": "Cancelar todas",
+    "stop": "Detener",
+    "progress": "{{current}} / {{total}}",
+    "stopping": "Deteniendo tras la petición en curso…",
+    "done": "{{done}} de {{total}} hechas",
+    "done-with-errors": "{{done}} de {{total}} hechas, {{failed}} con error",
+    "confirm": {
+      "remove": {
+        "title": "¿Quitar a todos los amigos?",
+        "description_one": "Se quitará {{count}} amigo de {{account}}.",
+        "description_other": "Se quitarán {{count}} amigos de {{account}}."
+      },
+      "accept": {
+        "title": "¿Aceptar todas las solicitudes?",
+        "description_one": "Se aceptará {{count}} solicitud en {{account}}.",
+        "description_other": "Se aceptarán {{count}} solicitudes en {{account}}."
+      },
+      "reject": {
+        "title": "¿Rechazar todas las solicitudes?",
+        "description_one": "Se rechazará {{count}} solicitud en {{account}}.",
+        "description_other": "Se rechazarán {{count}} solicitudes en {{account}}."
+      },
+      "cancel": {
+        "title": "¿Cancelar todas las solicitudes enviadas?",
+        "description_one": "Se cancelará {{count}} solicitud enviada desde {{account}}.",
+        "description_other": "Se cancelarán {{count}} solicitudes enviadas desde {{account}}."
+      },
+      "note": "Se aplica a toda la lista, no solo a los resultados de la búsqueda. Hay un segundo de espera entre peticiones y puedes detenerlo en cualquier momento."
+    }
+  }
+}

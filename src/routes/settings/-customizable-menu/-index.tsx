@@ -292,6 +292,19 @@ function AccountManagementSection() {
         <div className="item">
           <Label
             className="title"
+            htmlFor="friends"
+          >
+            {t('account-management.options.friends')}
+          </Label>
+          <Switch
+            id="friends"
+            checked={getMenuOptionVisibility('friends')}
+            onCheckedChange={updateMenuOption('friends')}
+          />
+        </div>
+        <div className="item">
+          <Label
+            className="title"
             htmlFor="redeem-codes"
           >
             {t('account-management.options.redeem-codes')}

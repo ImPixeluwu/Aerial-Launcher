@@ -167,6 +167,11 @@ export enum ElectronAPIEventKeys {
   PartyRemoveFriendAction = 'party:friend:remove',
   PartyRemoveFriendActionNotification = 'party:friend:remove:notification',
 
+  PartyGetInfo = 'party:get-info',
+  PartyMemberAction = 'party:member-action',
+  PartySetPrivacy = 'party:set-privacy',
+  PartyFixInvite = 'party:fix-invite',
+
   /**
    * Advanced Mode
    */
@@ -266,6 +271,13 @@ export enum ElectronAPIEventKeys {
 
   RedeemCodesRedeem = 'redeem-codes:redeem',
   RedeemCodesRedeenNotification = 'redeem-codes:redeem:notification',
+
+  /**
+   * Epic Games Friends
+   */
+
+  FriendsGetSummary = 'friends:get-summary',
+  FriendsAction = 'friends:action',
 
   /**
    * Devices Auth Management

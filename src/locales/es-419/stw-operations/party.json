@@ -56,5 +56,55 @@
         "sent_other": "{{count}} peticiones de amistad enviadas"
       }
     }
+  },
+  "status": {
+    "title": "Estado del grupo",
+    "description": "Grupo de la cuenta seleccionada en la cabecera.",
+    "no-account": "Selecciona una cuenta para ver su grupo",
+    "loading": "Buscando el grupo…",
+    "no-party": "La cuenta no está en ningún grupo",
+    "not-found": "No se encontró el grupo",
+    "error": "No se pudo cargar el grupo: {{error}}",
+    "retry-in": "Reintentando en {{seconds}} s",
+    "refresh": "Refrescar",
+    "summary_one": "{{count}}/{{max}} miembro",
+    "summary_other": "{{count}}/{{max}} miembros",
+    "private": "Privado",
+    "public": "Público",
+    "leader": "Líder",
+    "you": "tú",
+    "player": "Jugador",
+    "leader-only": "Solo el líder del grupo puede usar estas acciones",
+    "member": {
+      "label": "Miembro",
+      "placeholder": "Selecciona un miembro",
+      "empty": "No hay otros miembros"
+    },
+    "actions": {
+      "promote": "Promover",
+      "kick": "Expulsar",
+      "privacy": "Grupo privado",
+      "fix-invite": "Arreglar invitación"
+    },
+    "fix-invite-description": "Cambia la privacidad durante 5 segundos y la restaura, para que las invitaciones del juego vuelvan a funcionar.",
+    "results": {
+      "promote": "{{name}} es el nuevo líder del grupo",
+      "kick": "{{name}} fue expulsado",
+      "private": "El grupo ahora es privado",
+      "public": "El grupo ahora es público",
+      "fix-invite": "Invitaciones arregladas",
+      "error": "Error: {{error}}"
+    },
+    "confirm": {
+      "keep": "Volver",
+      "promote": {
+        "title": "¿Promover a líder?",
+        "description": "{{name}} será el líder del grupo y {{account}} perderá las acciones de líder."
+      },
+      "kick": {
+        "title": "¿Expulsar del grupo?",
+        "description": "{{name}} será expulsado del grupo de {{account}}."
+      }
+    }
   }
 }

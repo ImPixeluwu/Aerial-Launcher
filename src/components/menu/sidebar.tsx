@@ -369,6 +369,28 @@ export function SidebarMenu({
                       </Link>
                     </li>
                   )}
+                  {getMenuOptionVisibility('friends') && (
+                    <li className="item">
+                      <Link
+                        to="/account-management/friends"
+                        className={cn({
+                          [currentClassNameHover]: areThereAccounts,
+                          'cursor-not-allowed opacity-60':
+                            !areThereAccounts,
+                        })}
+                        activeProps={{
+                          className: cn({
+                            [activeClassName]: areThereAccounts,
+                          }),
+                        }}
+                        onClick={goToPage}
+                        onAuxClick={whatIsThis()}
+                        disabled={!areThereAccounts}
+                      >
+                        {t('account-management.options.friends')}
+                      </Link>
+                    </li>
+                  )}
                   {getMenuOptionVisibility('redeemCodes') && (
                     <li className="item">
                       <Link

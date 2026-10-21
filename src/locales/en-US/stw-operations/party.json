@@ -56,5 +56,55 @@
         "sent_other": "{{count}} friend requests were sent"
       }
     }
+  },
+  "status": {
+    "title": "Party status",
+    "description": "Party of the selected account in the header.",
+    "no-account": "Select an account to see its party",
+    "loading": "Looking for the party…",
+    "no-party": "The account is not in a party",
+    "not-found": "Party not found",
+    "error": "Could not load the party: {{error}}",
+    "retry-in": "Retrying in {{seconds}} s",
+    "refresh": "Refresh",
+    "summary_one": "{{count}}/{{max}} member",
+    "summary_other": "{{count}}/{{max}} members",
+    "private": "Private",
+    "public": "Public",
+    "leader": "Leader",
+    "you": "you",
+    "player": "Player",
+    "leader-only": "Only the party leader can use these actions",
+    "member": {
+      "label": "Member",
+      "placeholder": "Select a member",
+      "empty": "No other members"
+    },
+    "actions": {
+      "promote": "Promote",
+      "kick": "Kick",
+      "privacy": "Private party",
+      "fix-invite": "Fix invite"
+    },
+    "fix-invite-description": "Switches the privacy for 5 seconds and restores it, so invites from the game work again.",
+    "results": {
+      "promote": "{{name}} is the new party leader",
+      "kick": "{{name}} was kicked",
+      "private": "The party is private now",
+      "public": "The party is public now",
+      "fix-invite": "Invites fixed",
+      "error": "Error: {{error}}"
+    },
+    "confirm": {
+      "keep": "Keep",
+      "promote": {
+        "title": "Promote to leader?",
+        "description": "{{name}} will be the party leader and {{account}} will lose the leader actions."
+      },
+      "kick": {
+        "title": "Kick from the party?",
+        "description": "{{name}} will be kicked from the party of {{account}}."
+      }
+    }
   }
 }

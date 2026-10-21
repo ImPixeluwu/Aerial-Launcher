@@ -23,6 +23,7 @@ import { KickAllPartyCard } from './-kick-all-party'
 import { ClaimRewardsCard } from './-claim-rewards'
 import { InviteCard } from './-invite'
 import { LeavePartyCard } from './-leave-party'
+import { PartyStatusCard } from './-party-status'
 
 import { useClaimedRewardsNotifications } from './-hooks'
 
@@ -58,6 +59,7 @@ export function RouteComponent() {
       <div className="flex flex-grow">
         <div className="flex items-center justify-center w-full">
           <div className="flex flex-col items-center space-y-5 w-full">
+            <PartyStatusCard />
             <KickAllPartyCard />
             <div className="flex gap-5 items-center justify-center">
               <ClaimRewardsCard />

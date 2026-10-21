@@ -38,3 +38,23 @@ export type FetchPartyResponse = {
 export type PartyKickResponse = Record<string, unknown>
 
 export type PartyInviteResponse = Record<string, unknown>
+
+export type PartyPatchBody = {
+  config: {
+    join_confirmation: boolean
+    joinability: PartyData['config']['joinability']
+    max_size: number
+    discoverability: PartyData['config']['discoverability']
+  }
+  meta: {
+    delete: Array<string>
+    update: Record<string, string>
+  }
+  party_state_overridden: Record<string, never>
+  party_privacy_type: PartyData['config']['joinability']
+  party_type: string
+  party_sub_type: string
+  max_number_of_members: number
+  invite_ttl_seconds: number
+  revision: number
+}

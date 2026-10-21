@@ -2,6 +2,7 @@ import type {
   FetchPartyResponse,
   PartyInviteResponse,
   PartyKickResponse,
+  PartyPatchBody,
 } from '../../types/services/party'
 
 import { partyService } from '../config/party'
@@ -78,4 +79,40 @@ export function removeInvite({
       },
     }
   )
+}
+
+export function promote({
+  accessToken,
+  accountId,
+  partyId,
+}: {
+  accessToken: string
+  accountId: string
+  partyId: string
+}) {
+  return partyService.post(
+    `/parties/${partyId}/members/${accountId}/promote`,
+    {},
+    {
+      headers: {
+        Authorization: `bearer ${accessToken}`,
+      },
+    }
+  )
+}
+
+export function updateParty({
+  accessToken,
+  body,
+  partyId,
+}: {
+  accessToken: string
+  body: PartyPatchBody
+  partyId: string
+}) {
+  return partyService.patch(`/parties/${partyId}`, body, {
+    headers: {
+      Authorization: `bearer ${accessToken}`,
+    },
+  })
 }

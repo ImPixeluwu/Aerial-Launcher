@@ -22,6 +22,7 @@ import enUS_stwOperations_XPBoosts from './en-US/stw-operations/xpboosts.json'
 import enUS_stwOperations_Llamas from './en-US/stw-operations/llamas.json'
 import enUS_stwOperations_Unlock from './en-US/stw-operations/unlock.json'
 import enUS_accountManagement_VBucksInformation from './en-US/account-management/vbucks-information.json'
+import enUS_accountManagement_Friends from './en-US/account-management/friends.json'
 import enUS_accountManagement_EULA from './en-US/account-management/eula.json'
 import enUS_accountManagement_RedeemCodes from './en-US/account-management/redeem-codes.json'
 import enUS_accountManagement_DevicesAuth from './en-US/account-management/devices-auth.json'
@@ -57,6 +58,7 @@ const enUS = {
   },
   'account-management': {
     'vbucks-information': enUS_accountManagement_VBucksInformation,
+    friends: enUS_accountManagement_Friends,
     'redeem-codes': enUS_accountManagement_RedeemCodes,
     'devices-auth': enUS_accountManagement_DevicesAuth,
     'epic-settings': enUS_accountManagement_EpicSettings,
@@ -97,6 +99,7 @@ import es419_stwOperations_XPBoosts from './es-419/stw-operations/xpboosts.json'
 import es419_stwOperations_Llamas from './es-419/stw-operations/llamas.json'
 import es419_stwOperations_Unlock from './es-419/stw-operations/unlock.json'
 import es419_accountManagement_VBucksInformation from './es-419/account-management/vbucks-information.json'
+import es419_accountManagement_Friends from './es-419/account-management/friends.json'
 import es419_accountManagement_EULA from './es-419/account-management/eula.json'
 import es419_accountManagement_RedeemCodes from './es-419/account-management/redeem-codes.json'
 import es419_accountManagement_DevicesAuth from './es-419/account-management/devices-auth.json'
@@ -132,6 +135,7 @@ const es419 = {
   },
   'account-management': {
     'vbucks-information': es419_accountManagement_VBucksInformation,
+    friends: es419_accountManagement_Friends,
     'redeem-codes': es419_accountManagement_RedeemCodes,
     'devices-auth': es419_accountManagement_DevicesAuth,
     'epic-settings': es419_accountManagement_EpicSettings,

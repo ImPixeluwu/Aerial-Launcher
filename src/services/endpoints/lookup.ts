@@ -5,6 +5,8 @@ import type {
 
 import { publicAccountService } from '../config/public-account'
 
+import { buildAccountIdsQuery } from '../../lib/parsers/friends'
+
 export function findUserByAccountId({
   accessToken,
   accountId,
@@ -56,4 +58,24 @@ export function findUserByExternalDisplayName({
       },
     }
   )
+}
+
+/**
+ * Up to 100 accounts per request. The URL is absolute: joined to the base
+ * URL, axios would add a slash before the query.
+ */
+export function findUsersByAccountIds({
+  accessToken,
+  accountIds,
+}: {
+  accessToken: string
+  accountIds: Array<string>
+}) {
+  return publicAccountService.get<
+    Array<LookupFindOneByDisplayNameResponse>
+  >(`${publicAccountService.defaults.baseURL}?${buildAccountIdsQuery(accountIds)}`, {
+    headers: {
+      Authorization: `bearer ${accessToken}`,
+    },
+  })
 }

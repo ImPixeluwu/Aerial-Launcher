@@ -49,6 +49,7 @@ export const customizableMenuSettingsRelations: Record<
   ],
   accountManagement: [
     'vbucksInformation',
+    'friends',
     'redeemCodes',
     'devicesAuth',
     'epicGamesSettings',

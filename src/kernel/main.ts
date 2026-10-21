@@ -13,7 +13,9 @@ import type { AlertsDoneSearchPlayerConfig } from '../types/alerts'
 import type { AuthenticationByDeviceProperties } from '../types/authentication'
 import type { AutomationServiceActionConfig } from '../types/automation'
 import type { GroupRecord } from '../types/groups'
+import type { FriendsActionType } from '../types/friends-list'
 import type { InventoryProfileId } from '../types/inventory'
+import type { PartyMemberActionType } from '../types/party-info'
 import type { CustomizableMenuSettings, Settings } from '../types/settings'
 import type { TagRecord } from '../types/tags'
 import type { TaxiServiceServiceActionConfig } from '../types/taxi-service'
@@ -40,6 +42,7 @@ import { Authentication } from './core/authentication'
 import { ClaimRewards } from './core/claim-rewards'
 import { DevicesAuthManager } from './core/devices-auth'
 import { EULATracking } from './core/eula-tracking'
+import { FriendsManager } from './core/friends'
 import { Inventory } from './core/inventory'
 import { FortniteLauncher } from './core/launcher'
 import {
@@ -50,6 +53,7 @@ import {
 import { MatchmakingTrack } from './core/matchmaking-track'
 import { Manifest } from './core/manifest'
 import { Party } from './core/party'
+import { PartyInfoManager } from './core/party-info'
 import { RedeemCodes } from './core/redeem-codes'
 import { Schematics } from './core/schematics'
 import { Unlock } from './core/unlock'
@@ -243,6 +247,53 @@ const gotTheLock = app.requestSingleInstanceLock()
       ElectronAPIEventKeys.SchematicsGetOverview,
       (_, account: AccountData) => {
         return Schematics.getOverview(account)
+      },
+    )
+
+    ipcMain.handle(
+      ElectronAPIEventKeys.FriendsGetSummary,
+      (_, account: AccountData) => {
+        return FriendsManager.getSummary(account)
+      },
+    )
+
+    ipcMain.handle(
+      ElectronAPIEventKeys.FriendsAction,
+      (_, account: AccountData, type: FriendsActionType, target: string) => {
+        return FriendsManager.action(account, type, target)
+      },
+    )
+
+    ipcMain.handle(
+      ElectronAPIEventKeys.PartyGetInfo,
+      (_, account: AccountData) => {
+        return PartyInfoManager.getInfo(account)
+      },
+    )
+
+    ipcMain.handle(
+      ElectronAPIEventKeys.PartyMemberAction,
+      (
+        _,
+        account: AccountData,
+        type: PartyMemberActionType,
+        memberId: string,
+      ) => {
+        return PartyInfoManager.memberAction(account, type, memberId)
+      },
+    )
+
+    ipcMain.handle(
+      ElectronAPIEventKeys.PartySetPrivacy,
+      (_, account: AccountData, makePrivate: boolean) => {
+        return PartyInfoManager.setPrivacy(account, makePrivate === true)
+      },
+    )
+
+    ipcMain.handle(
+      ElectronAPIEventKeys.PartyFixInvite,
+      (_, account: AccountData) => {
+        return PartyInfoManager.fixInvite(account)
       },
     )
 

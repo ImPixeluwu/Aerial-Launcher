@@ -1,0 +1,103 @@
+{
+  "subtitle": "Epic Games friends and friend requests of the selected account.",
+  "no-account": "Select an account to see its friends",
+  "reload": "Reload",
+  "player": "Player",
+  "load-failed": "Could not load the friends",
+  "retry": "Retry",
+  "tabs": {
+    "friends": "Friends",
+    "incoming": "Received",
+    "outgoing": "Sent",
+    "blocked": "Blocked"
+  },
+  "search": {
+    "placeholder": "Search by name or account ID",
+    "clear": "Clear search",
+    "shown": "{{shown}} of {{total}}"
+  },
+  "empty": {
+    "friends": "This account has no friends yet",
+    "incoming": "No friend requests received",
+    "outgoing": "No friend requests sent",
+    "blocked": "No blocked players",
+    "no-matches": "No player matches the search"
+  },
+  "add": {
+    "placeholder": "Display name or account ID",
+    "submit": "Send request",
+    "success": "Friend request sent to {{name}}"
+  },
+  "copy-id": "Copy account ID",
+  "copied": "Account ID copied",
+  "actions": {
+    "accept": "Accept",
+    "reject": "Reject",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "block": "Block",
+    "unblock": "Unblock"
+  },
+  "results": {
+    "accept": "Friend request from {{name}} accepted",
+    "reject": "Friend request from {{name}} rejected",
+    "cancel": "Friend request to {{name}} cancelled",
+    "remove": "{{name}} was removed from friends",
+    "block": "{{name}} was blocked",
+    "unblock": "{{name}} was unblocked",
+    "error": "Error: {{error}}"
+  },
+  "confirm": {
+    "keep": "Keep",
+    "reject": {
+      "title": "Reject friend request?",
+      "description": "The request from {{name}} will be removed."
+    },
+    "cancel": {
+      "title": "Cancel friend request?",
+      "description": "The request sent to {{name}} will be removed."
+    },
+    "remove": {
+      "title": "Remove friend?",
+      "description": "{{name}} will be removed from the Epic Games friends of {{account}}."
+    },
+    "block": {
+      "title": "Block player?",
+      "description": "{{name}} will be removed from friends and requests and blocked on {{account}}. You can unblock them later from the Blocked tab."
+    }
+  },
+  "bulk": {
+    "remove": "Remove all",
+    "accept": "Accept all",
+    "reject": "Reject all",
+    "cancel": "Cancel all",
+    "stop": "Stop",
+    "progress": "{{current}} / {{total}}",
+    "stopping": "Stopping after the current request…",
+    "done": "{{done}} of {{total}} done",
+    "done-with-errors": "{{done}} of {{total}} done, {{failed}} failed",
+    "confirm": {
+      "remove": {
+        "title": "Remove all friends?",
+        "description_one": "{{count}} friend will be removed from {{account}}.",
+        "description_other": "{{count}} friends will be removed from {{account}}."
+      },
+      "accept": {
+        "title": "Accept all friend requests?",
+        "description_one": "{{count}} friend request will be accepted on {{account}}.",
+        "description_other": "{{count}} friend requests will be accepted on {{account}}."
+      },
+      "reject": {
+        "title": "Reject all friend requests?",
+        "description_one": "{{count}} friend request will be rejected on {{account}}.",
+        "description_other": "{{count}} friend requests will be rejected on {{account}}."
+      },
+      "cancel": {
+        "title": "Cancel all sent friend requests?",
+        "description_one": "{{count}} friend request sent from {{account}} will be cancelled.",
+        "description_other": "{{count}} friend requests sent from {{account}} will be cancelled."
+      },
+      "note": "It applies to the whole list, not only the search results. There is a one second wait between requests, and you can stop it at any time."
+    }
+  }
+}
