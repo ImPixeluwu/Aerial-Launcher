@@ -48,7 +48,7 @@ función se desarrolla en su propia sesión; empieza leyendo esto y luego el
 | Catálogo de esquemas | Hecho (solo lectura); PR ImPixeluwu/Aerial-Launcher#4 (squash) | `schematics/SPEC.md`, `schematics/NOTES.md` |
 | Visor de Homebase | Pendiente | `homebase/NOTES.md` |
 | Libro de colección | Descartado: el catálogo de esquemas ya incluye el libro (filtro de origen) | `collection-book/NOTES.md` (solo referencia) |
-| Amigos y grupo | Pendiente | `friends-party/NOTES.md` |
+| Amigos y grupo | SPEC escrito; en implementación | `friends-party/SPEC.md`, `friends-party/NOTES.md` |
 
 Los `NOTES.md` recogen lo que se vio en la interfaz de GLOW mientras los
 fragmentos extraídos estaban disponibles, más lo que Aerial ya tiene. Son la
