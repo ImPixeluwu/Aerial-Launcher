@@ -1,5 +1,10 @@
 # NOTAS: Libro de colección
 
+> **Descartado** [DECISIÓN del usuario]. El catálogo de esquemas ya muestra
+> los esquemas registrados en el libro, con un filtro de origen
+> (`schematics/SPEC.md`), así que un apartado propio sería redundante. Estas
+> notas se conservan solo como referencia.
+
 Esto es materia prima para el SPEC, no el SPEC. Lee antes
 `docs/features/README.md`.
 

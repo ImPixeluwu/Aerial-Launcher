@@ -14,7 +14,8 @@ función se desarrolla en su propia sesión; empieza leyendo esto y luego el
   - Cada función va en su propia rama, creada desde `main`.
   - Cada rama se cierra con un PR que solo incluye código.
   - Se fusiona con "Squash and merge".
-- **Inventario:** PR ImPixeluwu/Aerial-Launcher#1.
+- **Inventario:** PR ImPixeluwu/Aerial-Launcher#3.
+- **Catálogo de esquemas:** PR ImPixeluwu/Aerial-Launcher#4.
 - Objetivo: reimplementar en Aerial funciones que tiene GLOW Launcher 5.0.4
   (código cerrado, app Tauri) a partir de su **comportamiento**.
 
@@ -46,7 +47,7 @@ función se desarrolla en su propia sesión; empieza leyendo esto y luego el
 | Visor de inventario | Hecho; PR ImPixeluwu/Aerial-Launcher#3 (squash). Pendiente: virtualizar la cuadrícula (`inventory/SPEC.md` §12) | `inventory/SPEC.md` |
 | Catálogo de esquemas | Hecho (solo lectura); PR ImPixeluwu/Aerial-Launcher#4 (squash) | `schematics/SPEC.md`, `schematics/NOTES.md` |
 | Visor de Homebase | Pendiente | `homebase/NOTES.md` |
-| Libro de colección | Pendiente | `collection-book/NOTES.md` |
+| Libro de colección | Descartado: el catálogo de esquemas ya incluye el libro (filtro de origen) | `collection-book/NOTES.md` (solo referencia) |
 | Amigos y grupo | Pendiente | `friends-party/NOTES.md` |
 
 Los `NOTES.md` recogen lo que se vio en la interfaz de GLOW mientras los
@@ -106,13 +107,13 @@ hay antes de duplicarlo; `friends-party/NOTES.md` incluye una tabla de huecos.
   - `SlotLoadouts`, `AlterationGroups`, `SlotDefs`: qué perks admite cada
     arma (esquemas).
   - `SurvivorItemRating`, `HeroData`, `HomebaseRatingMapping`: supervivientes,
-    héroes y poder de la base (libro de colección, Homebase).
+    héroes y poder de la base (Homebase).
 
 ## 6. Verificación antes de cada push
 
 ```
 npm ci                      # Node 22
-npm test                    # vitest; ahora pasan 20 tests
+npm test                    # vitest; ahora pasan 42 tests
 npm run lint
 npx tsc --noEmit -p tsconfig.json 2>&1 | grep -c 'error TS'   # base: 410
 npx electron-forge package  # comprueba que compilan los tres bundles
@@ -121,6 +122,12 @@ npx electron-forge package  # comprueba que compilan los tres bundles
 - **`tsc`:** la base de FIZZCD ya trae 410 errores en 20 archivos. La regla es
   no añadir ninguno: compara el recuento y que no aparezca ningún archivo
   nuevo.
+- **Listas grandes:** las cuentas veteranas tienen miles de objetos,
+  esquemas o amigos. Pintarlos todos congela la ventana (2.000 esquemas:
+  0,6–2,8 s por clic). Virtualiza con `@tanstack/react-virtual` (ya es
+  dependencia), como la cuadrícula de `src/routes/stw-operations/schematics/`.
+- **Rendimiento:** mídelo en el preview (ver abajo) con datos generados:
+  número de elementos en el DOM y tiempo de un clic en un filtro.
 - **Vite por separado:** `vite build -c vite.renderer.config.ts` falla con
   "reading 'name'", también en la base. Usa `electron-forge package`.
 - **Cuenta y Electron:** en la nube no hay cuenta de Epic ni sesión de Electron
