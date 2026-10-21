@@ -356,3 +356,40 @@ Lo que no coincide (desconocido o fuera del objeto):
 
 La cuenta mostrada es la cuenta activa de Aerial (la de la cabecera), igual
 que en GLOW; al cambiarla se reinician los filtros y se recargan los datos.
+
+## 12. Pendiente: virtualizar la cuadrícula
+
+[DECISIÓN del usuario] Queda pendiente, pero está considerado. No se hizo
+junto al catálogo de esquemas para no cambiar el inventario en ese PR.
+
+**Motivo.** La cuadrícula del inventario pinta todas las tarjetas a la vez,
+como hacía el catálogo de esquemas antes de virtualizarlo. Con 2.000
+esquemas, el catálogo tenía 2.002 tarjetas en el DOM y cada clic en un
+filtro bloqueaba la ventana entre 0,6 y 2,8 s; con la virtualización bajó a
+20–50 tarjetas y ~30–50 ms (`schematics/SPEC.md` §7). En mochilas normales
+no se nota, pero el almacén (`outpost0`) o cuentas con muchos objetos
+pueden acercarse a esos números.
+
+**Cómo hacerlo.** Reutilizar el patrón de `SchematicGrid`
+(`src/routes/stw-operations/schematics/route.tsx`):
+
+- `@tanstack/react-virtual` (ya es dependencia, fijada en 3.14.13).
+- El scroll es el viewport del layout (`.main-wrapper-content`); el
+  `scrollMargin` es el `offsetTop` de la cuadrícula, medido en cada render.
+- Columnas calculadas con un `ResizeObserver`: `floor((ancho + 12) / (120 +
+  12))`, equivalente al `auto-fill` de 7,5 rem actual.
+- Altura fija de tarjeta, necesaria para que todas las filas midan igual.
+  Hoy las tarjetas del inventario no la tienen: la altura varía si no hay
+  PL o estrellas (ingredientes y materiales).
+- Tarjeta con `memo` y `onSelect(itemKey)` estable.
+- `useDeferredValue` sobre la lista filtrada en `-hooks.ts`, para que los
+  botones respondan antes de repintar.
+- Volver al principio de la cuadrícula al cambiar filtros o perfil, y
+  `scrollToIndex` al recorrer la ficha con ← →.
+- Antes, extraer la cuadrícula a `src/components/stw-items/` como
+  componente genérico (recibe los objetos y una función que pinta la
+  tarjeta), para que la usen las dos páginas.
+
+**Verificación prevista.** La misma que en el catálogo: preview con miles de
+objetos generados, contar tarjetas en el DOM y medir el tiempo de un clic en
+un filtro antes y después, más capturas a 800×600.
