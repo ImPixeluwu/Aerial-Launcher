@@ -1,0 +1,3906 @@
+From 586a8acaf7e5f7a45cfabd03c273b5bd8a0d7b3a Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 21 Oct 2026 05:52:39 +0000
+Subject: [PATCH] Add Epic Games friends page and party status card
+
+Friends (Account Management > Epic Games Friends):
+- Friends, received, sent and blocked lists of the selected account, from
+  the friends summary, with names resolved in batches of 100.
+- Add by display name or account ID; accept, reject, cancel, remove, block
+  and unblock per row; bulk remove, accept, reject and cancel run one
+  request per second with progress and a stop button.
+- Destructive and bulk actions ask for confirmation.
+- Local search and a virtualized list for accounts with thousands of
+  entries.
+
+Party:
+- New card on the party page with the selected account's party: members,
+  leader, size and privacy, retrying every 10 s while there is no party.
+- Leader actions: promote, kick (still behind the partyKick flag), toggle
+  privacy and fix invite. The existing cards are unchanged.
+
+The new IPC channels use invoke/handle. Pure helpers are tested in
+src/lib/parsers/friends.test.ts and party-info.test.ts.
+---
+ src/components/menu/sidebar.tsx               |  22 +
+ src/components/ui/extended/confirm-dialog.tsx |  69 +++
+ src/config/constants/friends.ts               |  35 ++
+ src/config/constants/main-process.ts          |  12 +
+ src/kernel/core/friends.ts                    | 213 +++++++
+ src/kernel/core/party-info.ts                 | 261 +++++++++
+ src/kernel/main.ts                            |  51 ++
+ src/kernel/preload-actions/friends.ts         |  29 +
+ src/kernel/preload-actions/party-info.ts      |  44 ++
+ src/kernel/preload.ts                         |   4 +
+ src/lib/parsers/friends.test.ts               | 198 +++++++
+ src/lib/parsers/friends.ts                    | 245 ++++++++
+ src/lib/parsers/party-info.test.ts            | 176 ++++++
+ src/lib/parsers/party-info.ts                 | 142 +++++
+ src/lib/validations/schemas/settings.ts       |   1 +
+ .../en-US/account-management/friends.json     | 103 ++++
+ src/locales/en-US/sidebar.json                |   1 +
+ src/locales/en-US/stw-operations/party.json   |  50 ++
+ .../es-419/account-management/friends.json    | 103 ++++
+ src/locales/es-419/general.json               |   1 +
+ src/locales/es-419/sidebar.json               |   1 +
+ src/locales/es-419/stw-operations/party.json  |  50 ++
+ src/locales/resources.ts                      |   4 +
+ src/routeTree.gen.ts                          |  12 +
+ .../account-management/friends/-hooks.ts      | 298 ++++++++++
+ .../account-management/friends/route.tsx      | 538 ++++++++++++++++++
+ .../settings/-customizable-menu/-index.tsx    |  13 +
+ .../stw-operations/party/-party-status.tsx    | 498 ++++++++++++++++
+ src/routes/stw-operations/party/route.tsx     |   2 +
+ src/services/endpoints/friends.ts             |  61 +-
+ src/services/endpoints/lookup.ts              |  22 +
+ src/services/endpoints/party.ts               |  37 ++
+ src/state/settings/customizable-menu.ts       |   1 +
+ src/types/friends-list.d.ts                   |  39 ++
+ src/types/party-info.d.ts                     |  36 ++
+ src/types/services/friends.d.ts               |  15 +
+ src/types/services/party.d.ts                 |  20 +
+ 37 files changed, 3406 insertions(+), 1 deletion(-)
+ create mode 100644 src/components/ui/extended/confirm-dialog.tsx
+ create mode 100644 src/config/constants/friends.ts
+ create mode 100644 src/kernel/core/friends.ts
+ create mode 100644 src/kernel/core/party-info.ts
+ create mode 100644 src/kernel/preload-actions/friends.ts
+ create mode 100644 src/kernel/preload-actions/party-info.ts
+ create mode 100644 src/lib/parsers/friends.test.ts
+ create mode 100644 src/lib/parsers/friends.ts
+ create mode 100644 src/lib/parsers/party-info.test.ts
+ create mode 100644 src/lib/parsers/party-info.ts
+ create mode 100644 src/locales/en-US/account-management/friends.json
+ create mode 100644 src/locales/es-419/account-management/friends.json
+ create mode 100644 src/routes/account-management/friends/-hooks.ts
+ create mode 100644 src/routes/account-management/friends/route.tsx
+ create mode 100644 src/routes/stw-operations/party/-party-status.tsx
+ create mode 100644 src/types/friends-list.d.ts
+ create mode 100644 src/types/party-info.d.ts
+
+diff --git a/src/components/menu/sidebar.tsx b/src/components/menu/sidebar.tsx
+index e153aae..a91ae1f 100644
+--- a/src/components/menu/sidebar.tsx
++++ b/src/components/menu/sidebar.tsx
+@@ -369,6 +369,28 @@ export function SidebarMenu({
+                       </Link>
+                     </li>
+                   )}
++                  {getMenuOptionVisibility('friends') && (
++                    <li className="item">
++                      <Link
++                        to="/account-management/friends"
++                        className={cn({
++                          [currentClassNameHover]: areThereAccounts,
++                          'cursor-not-allowed opacity-60':
++                            !areThereAccounts,
++                        })}
++                        activeProps={{
++                          className: cn({
++                            [activeClassName]: areThereAccounts,
++                          }),
++                        }}
++                        onClick={goToPage}
++                        onAuxClick={whatIsThis()}
++                        disabled={!areThereAccounts}
++                      >
++                        {t('account-management.options.friends')}
++                      </Link>
++                    </li>
++                  )}
+                   {getMenuOptionVisibility('redeemCodes') && (
+                     <li className="item">
+                       <Link
+diff --git a/src/components/ui/extended/confirm-dialog.tsx b/src/components/ui/extended/confirm-dialog.tsx
+new file mode 100644
+index 0000000..2a468ff
+--- /dev/null
++++ b/src/components/ui/extended/confirm-dialog.tsx
+@@ -0,0 +1,69 @@
++import type { ReactNode } from 'react'
++
++import { useState } from 'react'
++
++import { Button } from '../button'
++import {
++  Dialog,
++  DialogContent,
++  DialogDescription,
++  DialogFooter,
++  DialogHeader,
++  DialogTitle,
++} from '../dialog'
++
++export type ConfirmRequest = {
++  title: string
++  description: ReactNode
++  confirmLabel: string
++  cancelLabel: string
++  destructive?: boolean
++  onConfirm: () => void
++}
++
++/**
++ * Asks before running an action that changes the account. Keep one per page
++ * and open it with `confirm(request)`.
++ */
++export function useConfirmDialog() {
++  const [request, setRequest] = useState<ConfirmRequest | null>(null)
++
++  const dialog = (
++    <Dialog
++      open={request !== null}
++      onOpenChange={(open) => {
++        if (!open) {
++          setRequest(null)
++        }
++      }}
++    >
++      <DialogContent className="max-w-md">
++        <DialogHeader>
++          <DialogTitle>{request?.title}</DialogTitle>
++          <DialogDescription asChild>
++            <div className="space-y-2">{request?.description}</div>
++          </DialogDescription>
++        </DialogHeader>
++        <DialogFooter className="gap-2">
++          <Button
++            variant="outline"
++            onClick={() => setRequest(null)}
++          >
++            {request?.cancelLabel}
++          </Button>
++          <Button
++            variant={request?.destructive ? 'destructive' : 'default'}
++            onClick={() => {
++              request?.onConfirm()
++              setRequest(null)
++            }}
++          >
++            {request?.confirmLabel}
++          </Button>
++        </DialogFooter>
++      </DialogContent>
++    </Dialog>
++  )
++
++  return { confirm: setRequest, dialog }
++}
+diff --git a/src/config/constants/friends.ts b/src/config/constants/friends.ts
+new file mode 100644
+index 0000000..6d07684
+--- /dev/null
++++ b/src/config/constants/friends.ts
+@@ -0,0 +1,35 @@
++import type { FriendsListType } from '../../types/friends-list'
++
++export const friendsListTypes: Array<FriendsListType> = [
++  'friends',
++  'incoming',
++  'outgoing',
++  'blocked',
++]
++
++export const friendsSearchDelay = 150
++
++/**
++ * Wait between the calls of a bulk action, so Epic does not rate limit it.
++ */
++export const friendsBulkDelay = 1_000
++
++/**
++ * Most account ids the account service resolves in one request.
++ */
++export const friendsNamesBatchSize = 100
++
++/**
++ * Name requests sent at the same time.
++ */
++export const friendsNamesConcurrency = 4
++
++/**
++ * Seconds between retries while the account is not in a party.
++ */
++export const partyRetrySeconds = 10
++
++/**
++ * How long "fix invite" keeps the opposite privacy before restoring it.
++ */
++export const partyFixInviteDelay = 5_000
+diff --git a/src/config/constants/main-process.ts b/src/config/constants/main-process.ts
+index 494c80d..1102269 100644
+--- a/src/config/constants/main-process.ts
++++ b/src/config/constants/main-process.ts
+@@ -167,6 +167,11 @@ export enum ElectronAPIEventKeys {
+   PartyRemoveFriendAction = 'party:friend:remove',
+   PartyRemoveFriendActionNotification = 'party:friend:remove:notification',
+ 
++  PartyGetInfo = 'party:get-info',
++  PartyMemberAction = 'party:member-action',
++  PartySetPrivacy = 'party:set-privacy',
++  PartyFixInvite = 'party:fix-invite',
++
+   /**
+    * Advanced Mode
+    */
+@@ -267,6 +272,13 @@ export enum ElectronAPIEventKeys {
+   RedeemCodesRedeem = 'redeem-codes:redeem',
+   RedeemCodesRedeenNotification = 'redeem-codes:redeem:notification',
+ 
++  /**
++   * Epic Games Friends
++   */
++
++  FriendsGetSummary = 'friends:get-summary',
++  FriendsAction = 'friends:action',
++
+   /**
+    * Devices Auth Management
+    */
+diff --git a/src/kernel/core/friends.ts b/src/kernel/core/friends.ts
+new file mode 100644
+index 0000000..ef69652
+--- /dev/null
++++ b/src/kernel/core/friends.ts
+@@ -0,0 +1,213 @@
++import type { AccountData } from '../../types/accounts'
++import type {
++  FriendsActionResponse,
++  FriendsActionType,
++  FriendsSummary,
++} from '../../types/friends-list'
++
++import {
++  friendsNamesBatchSize,
++  friendsNamesConcurrency,
++} from '../../config/constants/friends'
++
++import { Authentication } from './authentication'
++import { LookupManager } from './lookup'
++
++import {
++  addFriend,
++  blockUser,
++  getFriendsSummary,
++  removeFriend,
++  unblockUser,
++} from '../../services/endpoints/friends'
++import { findUsersByAccountIds } from '../../services/endpoints/lookup'
++
++import {
++  chunk,
++  createEmptyFriendsSummary,
++  getFriendsSummaryAccountIds,
++  isEpicAccountId,
++  normalizeFriendsSummary,
++} from '../../lib/parsers/friends'
++
++const friendsActionTypes: Array<FriendsActionType> = [
++  'add',
++  'accept',
++  'reject',
++  'cancel',
++  'remove',
++  'block',
++  'unblock',
++]
++
++/**
++ * Epic Games friends of an account. The local list of players to invite
++ * from the party page is handled by `Party`.
++ */
++export class FriendsManager {
++  static async getSummary(account: AccountData): Promise<FriendsSummary> {
++    const failed = (error: string): FriendsSummary => ({
++      ...createEmptyFriendsSummary(),
++      success: false,
++      error,
++    })
++
++    try {
++      const accessToken = await Authentication.verifyAccessToken(account)
++
++      if (!accessToken) {
++        return failed('Could not authenticate the account')
++      }
++
++      const response = await getFriendsSummary({
++        accessToken,
++        accountId: account.accountId,
++      })
++      const names = await FriendsManager.resolveNames(
++        accessToken,
++        getFriendsSummaryAccountIds(response.data ?? {}),
++      )
++
++      return normalizeFriendsSummary(response.data ?? {}, names)
++
++      // eslint-disable-next-line @typescript-eslint/no-explicit-any
++    } catch (error: any) {
++      return failed(error?.response?.data?.errorMessage ?? 'Unknown Error')
++    }
++  }
++
++  static async action(
++    account: AccountData,
++    type: FriendsActionType,
++    target: string,
++  ): Promise<FriendsActionResponse> {
++    const value = `${target ?? ''}`.trim()
++
++    if (!friendsActionTypes.includes(type)) {
++      return { success: false, error: 'Invalid action' }
++    }
++
++    if (value === '') {
++      return { success: false, error: 'Type a display name or account id' }
++    }
++
++    if (type !== 'add' && !isEpicAccountId(value)) {
++      return { success: false, error: 'Invalid account id' }
++    }
++
++    try {
++      const accessToken = await Authentication.verifyAccessToken(account)
++
++      if (!accessToken) {
++        return { success: false, error: 'Could not authenticate the account' }
++      }
++
++      const config = {
++        accessToken,
++        accountId: account.accountId,
++      }
++
++      if (type === 'add') {
++        const user = await LookupManager.searchUserByDisplayName({
++          account,
++          displayName: value,
++        })
++
++        if (!user.success) {
++          return {
++            success: false,
++            error: `${user.errorMessage ?? 'Player not found'}`,
++          }
++        }
++
++        if (user.data.id === account.accountId) {
++          return {
++            success: false,
++            error: 'You cannot add your own account',
++          }
++        }
++
++        await addFriend({ ...config, friendId: user.data.id })
++
++        return {
++          success: true,
++          accountId: user.data.id,
++          displayName: user.data.displayName,
++        }
++      }
++
++      switch (type) {
++        case 'accept':
++          await addFriend({ ...config, friendId: value })
++          break
++
++        case 'reject':
++        case 'cancel':
++        case 'remove':
++          await removeFriend({ ...config, friendId: value })
++          break
++
++        case 'block':
++          await blockUser({ ...config, userId: value })
++          break
++
++        case 'unblock':
++          await unblockUser({ ...config, userId: value })
++          break
++      }
++
++      return { success: true, accountId: value }
++
++      // eslint-disable-next-line @typescript-eslint/no-explicit-any
++    } catch (error: any) {
++      return {
++        success: false,
++        error: error?.response?.data?.errorMessage ?? 'Unknown Error',
++      }
++    }
++  }
++
++  /**
++   * Names by account id. A batch that fails leaves its accounts unnamed
++   * instead of failing the whole list.
++   */
++  static async resolveNames(accessToken: string, accountIds: Array<string>) {
++    const names: Record<string, string> = {}
++    const batches = chunk(accountIds, friendsNamesBatchSize)
++
++    // A few requests at a time: accounts can have thousands of friends
++    for (const group of chunk(batches, friendsNamesConcurrency)) {
++      const responses = await Promise.allSettled(
++        group.map((batch) =>
++          findUsersByAccountIds({ accessToken, accountIds: batch }),
++        ),
++      )
++
++      responses.forEach((response) => {
++        if (response.status !== 'fulfilled') {
++          return
++        }
++
++        const users = response.value.data ?? []
++
++        users.forEach((user) => {
++          // Console accounts may only have their platform name
++          const externalName = Object.values(user?.externalAuths ?? {})
++            .map(
++              (auth) =>
++                (auth as { externalDisplayName?: string } | undefined)
++                  ?.externalDisplayName,
++            )
++            .find(Boolean)
++          const name = user?.displayName || externalName
++
++          if (user?.id && name) {
++            names[user.id] = name
++          }
++        })
++      })
++    }
++
++    return names
++  }
++}
+diff --git a/src/kernel/core/party-info.ts b/src/kernel/core/party-info.ts
+new file mode 100644
+index 0000000..bf0da7d
+--- /dev/null
++++ b/src/kernel/core/party-info.ts
+@@ -0,0 +1,261 @@
++import type { AccountData } from '../../types/accounts'
++import type {
++  PartyActionResponse,
++  PartyInfo,
++  PartyMemberActionType,
++} from '../../types/party-info'
++import type { PartyData } from '../../types/services/party'
++
++import { stwFeatureAvailability } from '../../config/constants/feature-availability'
++import { partyFixInviteDelay } from '../../config/constants/friends'
++
++import { Authentication } from './authentication'
++import { FriendsManager } from './friends'
++
++import {
++  fetchParty,
++  kick,
++  promote,
++  updateParty,
++} from '../../services/endpoints/party'
++
++import {
++  buildPartyPrivacyPatch,
++  getPartyLeaderId,
++  getPartyMembersWithoutName,
++  isPartyPrivate,
++  parsePartyInfo,
++} from '../../lib/parsers/party-info'
++
++const staleRevisionErrorCode =
++  'errors.com.epicgames.social.party.stale_revision'
++const changeForbiddenErrorCode =
++  'errors.com.epicgames.social.party.party_change_forbidden'
++
++// eslint-disable-next-line @typescript-eslint/no-explicit-any
++function toFailure(error: any): PartyActionResponse {
++  const data = error?.response?.data
++  const errorCode: string | undefined = data?.errorCode
++
++  if (errorCode === changeForbiddenErrorCode) {
++    return {
++      success: false,
++      error: 'Only the party leader can do this',
++      errorCode,
++    }
++  }
++
++  return {
++    success: false,
++    error: data?.errorMessage ?? error?.message ?? 'Unknown Error',
++    errorCode,
++  }
++}
++
++/**
++ * Status of the selected account's party and the leader actions on it. The
++ * multi-account kick, leave and invite actions are in `Party`.
++ */
++export class PartyInfoManager {
++  static async getInfo(account: AccountData): Promise<PartyInfo> {
++    try {
++      const accessToken = await Authentication.verifyAccessToken(account)
++
++      if (!accessToken) {
++        return {
++          success: false,
++          error: 'Could not authenticate the account',
++          party: null,
++          isLeader: false,
++        }
++      }
++
++      const party = await PartyInfoManager.fetchCurrent(
++        accessToken,
++        account.accountId,
++      )
++
++      if (!party) {
++        return { success: true, party: null, isLeader: false }
++      }
++
++      const missingNames = getPartyMembersWithoutName(party)
++      const names =
++        missingNames.length > 0
++          ? await FriendsManager.resolveNames(accessToken, missingNames)
++          : {}
++
++      return {
++        success: true,
++        party: parsePartyInfo(party, names),
++        isLeader: getPartyLeaderId(party) === account.accountId,
++      }
++
++      // eslint-disable-next-line @typescript-eslint/no-explicit-any
++    } catch (error: any) {
++      return { ...toFailure(error), party: null, isLeader: false }
++    }
++  }
++
++  static async memberAction(
++    account: AccountData,
++    type: PartyMemberActionType,
++    memberId: string,
++  ): Promise<PartyActionResponse> {
++    if (type !== 'kick' && type !== 'promote') {
++      return { success: false, error: 'Invalid action' }
++    }
++
++    // Kicking uses the same request as the disabled "kick all"
++    if (type === 'kick' && !stwFeatureAvailability.partyKick) {
++      return { success: false, error: 'Temporarily unavailable' }
++    }
++
++    if (!memberId || memberId === account.accountId) {
++      return { success: false, error: 'Select another party member' }
++    }
++
++    return PartyInfoManager.asLeader(account, async (accessToken, party) => {
++      if (!party.members.some(({ account_id }) => account_id === memberId)) {
++        return { success: false, error: 'The player is not in the party' }
++      }
++
++      const config = { accessToken, accountId: memberId, partyId: party.id }
++
++      if (type === 'kick') {
++        await kick(config)
++      } else {
++        await promote(config)
++      }
++
++      return { success: true }
++    })
++  }
++
++  static async setPrivacy(
++    account: AccountData,
++    makePrivate: boolean,
++  ): Promise<PartyActionResponse> {
++    return PartyInfoManager.asLeader(account, async (accessToken, party) => {
++      if (isPartyPrivate(party) !== makePrivate) {
++        await PartyInfoManager.patchPrivacy(accessToken, party, makePrivate)
++      }
++
++      return { success: true }
++    })
++  }
++
++  /**
++   * Switches to the opposite privacy for a few seconds and restores it,
++   * which refreshes the party so invites work again.
++   */
++  static async fixInvite(account: AccountData): Promise<PartyActionResponse> {
++    return PartyInfoManager.asLeader(account, async (accessToken, party) => {
++      const wasPrivate = isPartyPrivate(party)
++
++      await PartyInfoManager.patchPrivacy(accessToken, party, !wasPrivate)
++      await new Promise((resolve) => setTimeout(resolve, partyFixInviteDelay))
++
++      // The token may have been renewed, and the party has a new revision
++      const newAccessToken =
++        (await Authentication.verifyAccessToken(account)) ?? accessToken
++      const current = await PartyInfoManager.fetchCurrent(
++        newAccessToken,
++        account.accountId,
++      )
++
++      if (!current || current.id !== party.id) {
++        return { success: false, error: 'The party changed' }
++      }
++
++      if (isPartyPrivate(current) !== wasPrivate) {
++        await PartyInfoManager.patchPrivacy(
++          newAccessToken,
++          current,
++          wasPrivate,
++        )
++      }
++
++      return { success: true }
++    })
++  }
++
++  private static async fetchCurrent(accessToken: string, accountId: string) {
++    const response = await fetchParty({ accessToken, accountId })
++
++    return (response.data?.current?.[0] as PartyData | undefined) ?? null
++  }
++
++  /**
++   * Runs a leader action on the account's current party.
++   */
++  private static async asLeader(
++    account: AccountData,
++    callback: (
++      accessToken: string,
++      party: PartyData,
++    ) => Promise<PartyActionResponse>,
++  ): Promise<PartyActionResponse> {
++    try {
++      const accessToken = await Authentication.verifyAccessToken(account)
++
++      if (!accessToken) {
++        return { success: false, error: 'Could not authenticate the account' }
++      }
++
++      const party = await PartyInfoManager.fetchCurrent(
++        accessToken,
++        account.accountId,
++      )
++
++      if (!party) {
++        return { success: false, error: 'You are not in a party' }
++      }
++
++      if (getPartyLeaderId(party) !== account.accountId) {
++        return {
++          success: false,
++          error: 'Only the party leader can do this',
++          errorCode: changeForbiddenErrorCode,
++        }
++      }
++
++      return await callback(accessToken, party)
++
++      // eslint-disable-next-line @typescript-eslint/no-explicit-any
++    } catch (error: any) {
++      return toFailure(error)
++    }
++  }
++
++  /**
++   * Retries once with the revision Epic reports when ours is stale.
++   */
++  private static async patchPrivacy(
++    accessToken: string,
++    party: PartyData,
++    makePrivate: boolean,
++  ) {
++    const send = (revision: number) =>
++      updateParty({
++        accessToken,
++        partyId: party.id,
++        body: buildPartyPrivacyPatch({ ...party, revision }, makePrivate),
++      })
++
++    try {
++      await send(party.revision)
++
++      // eslint-disable-next-line @typescript-eslint/no-explicit-any
++    } catch (error: any) {
++      const data = error?.response?.data
++      const revision = Number.parseInt(data?.messageVars?.[1], 10)
++
++      if (data?.errorCode !== staleRevisionErrorCode || Number.isNaN(revision)) {
++        throw error
++      }
++
++      await send(revision)
++    }
++  }
++}
+diff --git a/src/kernel/main.ts b/src/kernel/main.ts
+index 2a44c64..11bec25 100644
+--- a/src/kernel/main.ts
++++ b/src/kernel/main.ts
+@@ -13,7 +13,9 @@ import type { AlertsDoneSearchPlayerConfig } from '../types/alerts'
+ import type { AuthenticationByDeviceProperties } from '../types/authentication'
+ import type { AutomationServiceActionConfig } from '../types/automation'
+ import type { GroupRecord } from '../types/groups'
++import type { FriendsActionType } from '../types/friends-list'
+ import type { InventoryProfileId } from '../types/inventory'
++import type { PartyMemberActionType } from '../types/party-info'
+ import type { CustomizableMenuSettings, Settings } from '../types/settings'
+ import type { TagRecord } from '../types/tags'
+ import type { TaxiServiceServiceActionConfig } from '../types/taxi-service'
+@@ -40,6 +42,7 @@ import { Authentication } from './core/authentication'
+ import { ClaimRewards } from './core/claim-rewards'
+ import { DevicesAuthManager } from './core/devices-auth'
+ import { EULATracking } from './core/eula-tracking'
++import { FriendsManager } from './core/friends'
+ import { Inventory } from './core/inventory'
+ import { FortniteLauncher } from './core/launcher'
+ import {
+@@ -50,6 +53,7 @@ import {
+ import { MatchmakingTrack } from './core/matchmaking-track'
+ import { Manifest } from './core/manifest'
+ import { Party } from './core/party'
++import { PartyInfoManager } from './core/party-info'
+ import { RedeemCodes } from './core/redeem-codes'
+ import { Schematics } from './core/schematics'
+ import { Unlock } from './core/unlock'
+@@ -246,6 +250,53 @@ const gotTheLock = app.requestSingleInstanceLock()
+       },
+     )
+ 
++    ipcMain.handle(
++      ElectronAPIEventKeys.FriendsGetSummary,
++      (_, account: AccountData) => {
++        return FriendsManager.getSummary(account)
++      },
++    )
++
++    ipcMain.handle(
++      ElectronAPIEventKeys.FriendsAction,
++      (_, account: AccountData, type: FriendsActionType, target: string) => {
++        return FriendsManager.action(account, type, target)
++      },
++    )
++
++    ipcMain.handle(
++      ElectronAPIEventKeys.PartyGetInfo,
++      (_, account: AccountData) => {
++        return PartyInfoManager.getInfo(account)
++      },
++    )
++
++    ipcMain.handle(
++      ElectronAPIEventKeys.PartyMemberAction,
++      (
++        _,
++        account: AccountData,
++        type: PartyMemberActionType,
++        memberId: string,
++      ) => {
++        return PartyInfoManager.memberAction(account, type, memberId)
++      },
++    )
++
++    ipcMain.handle(
++      ElectronAPIEventKeys.PartySetPrivacy,
++      (_, account: AccountData, makePrivate: boolean) => {
++        return PartyInfoManager.setPrivacy(account, makePrivate === true)
++      },
++    )
++
++    ipcMain.handle(
++      ElectronAPIEventKeys.PartyFixInvite,
++      (_, account: AccountData) => {
++        return PartyInfoManager.fixInvite(account)
++      },
++    )
++
+     ipcMain.handle(ElectronAPIEventKeys.SettingsDetectPath, () => {
+       return SettingsManager.detectGamePath({
+         namespaceId: 'fn',
+diff --git a/src/kernel/preload-actions/friends.ts b/src/kernel/preload-actions/friends.ts
+new file mode 100644
+index 0000000..c64cb20
+--- /dev/null
++++ b/src/kernel/preload-actions/friends.ts
+@@ -0,0 +1,29 @@
++import type { AccountData } from '../../types/accounts'
++import type {
++  FriendsActionResponse,
++  FriendsActionType,
++  FriendsSummary,
++} from '../../types/friends-list'
++
++import { ipcRenderer } from 'electron'
++
++import { ElectronAPIEventKeys } from '../../config/constants/main-process'
++
++export function getFriendsSummary(
++  account: AccountData,
++): Promise<FriendsSummary> {
++  return ipcRenderer.invoke(ElectronAPIEventKeys.FriendsGetSummary, account)
++}
++
++export function friendsAction(
++  account: AccountData,
++  type: FriendsActionType,
++  target: string,
++): Promise<FriendsActionResponse> {
++  return ipcRenderer.invoke(
++    ElectronAPIEventKeys.FriendsAction,
++    account,
++    type,
++    target,
++  )
++}
+diff --git a/src/kernel/preload-actions/party-info.ts b/src/kernel/preload-actions/party-info.ts
+new file mode 100644
+index 0000000..579a2b6
+--- /dev/null
++++ b/src/kernel/preload-actions/party-info.ts
+@@ -0,0 +1,44 @@
++import type { AccountData } from '../../types/accounts'
++import type {
++  PartyActionResponse,
++  PartyInfo,
++  PartyMemberActionType,
++} from '../../types/party-info'
++
++import { ipcRenderer } from 'electron'
++
++import { ElectronAPIEventKeys } from '../../config/constants/main-process'
++
++export function getPartyInfo(account: AccountData): Promise<PartyInfo> {
++  return ipcRenderer.invoke(ElectronAPIEventKeys.PartyGetInfo, account)
++}
++
++export function partyMemberAction(
++  account: AccountData,
++  type: PartyMemberActionType,
++  memberId: string,
++): Promise<PartyActionResponse> {
++  return ipcRenderer.invoke(
++    ElectronAPIEventKeys.PartyMemberAction,
++    account,
++    type,
++    memberId,
++  )
++}
++
++export function partySetPrivacy(
++  account: AccountData,
++  makePrivate: boolean,
++): Promise<PartyActionResponse> {
++  return ipcRenderer.invoke(
++    ElectronAPIEventKeys.PartySetPrivacy,
++    account,
++    makePrivate,
++  )
++}
++
++export function partyFixInvite(
++  account: AccountData,
++): Promise<PartyActionResponse> {
++  return ipcRenderer.invoke(ElectronAPIEventKeys.PartyFixInvite, account)
++}
+diff --git a/src/kernel/preload.ts b/src/kernel/preload.ts
+index 04d4313..357e9de 100644
+--- a/src/kernel/preload.ts
++++ b/src/kernel/preload.ts
+@@ -12,12 +12,14 @@ import * as automationsActions from './preload-actions/automation'
+ import * as customizableMenuActions from './preload-actions/customizable-menu'
+ import * as devicesAuthActions from './preload-actions/devices-auth'
+ import * as eventActions from './preload-actions/events'
++import * as friendsActions from './preload-actions/friends'
+ import * as generalActions from './preload-actions/general'
+ import * as inventoryActions from './preload-actions/inventory'
+ import * as launcherActions from './preload-actions/launcher'
+ import * as matchmakingActions from './preload-actions/matchmaking'
+ import * as mcpActions from './preload-actions/mcp'
+ import * as partyActions from './preload-actions/party'
++import * as partyInfoActions from './preload-actions/party-info'
+ import * as redeemCodesActions from './preload-actions/redeem-codes'
+ import * as requestActions from './preload-actions/requests'
+ import * as scheduleActions from './preload-actions/schedules'
+@@ -38,10 +40,12 @@ export const availableElectronAPIs = {
+   ...autoPinUrnsActions,
+   ...devicesAuthActions,
+   ...eventActions,
++  ...friendsActions,
+   ...generalActions,
+   ...inventoryActions,
+   ...launcherActions,
+   ...partyActions,
++  ...partyInfoActions,
+   ...redeemCodesActions,
+   ...schematicsActions,
+   ...matchmakingActions,
+diff --git a/src/lib/parsers/friends.test.ts b/src/lib/parsers/friends.test.ts
+new file mode 100644
+index 0000000..0fe9c18
+--- /dev/null
++++ b/src/lib/parsers/friends.test.ts
+@@ -0,0 +1,198 @@
++import type { FriendsLists } from '../../types/friends-list'
++
++import { describe, expect, it } from 'vitest'
++
++import {
++  applyFriendsAction,
++  buildAccountIdsQuery,
++  chunk,
++  filterFriends,
++  getFriendDisplayName,
++  getFriendsSummaryAccountIds,
++  isEpicAccountId,
++  normalizeFriendsSummary,
++} from './friends'
++
++const ids = {
++  alpha: 'a'.repeat(32),
++  bravo: 'b'.repeat(32),
++  charlie: 'c'.repeat(32),
++  delta: 'd'.repeat(32),
++  echo: 'e'.repeat(32),
++}
++
++describe('normalizeFriendsSummary', () => {
++  const summary = {
++    friends: [
++      { accountId: ids.bravo, created: '2024-01-01T00:00:00Z', mutual: 3 },
++      { accountId: ids.alpha },
++    ],
++    incoming: [{ accountId: ids.charlie }],
++    outgoing: [{ accountId: ids.delta }],
++    blocklist: [{ accountId: ids.echo }],
++  }
++  const names = {
++    [ids.alpha]: 'alpha',
++    [ids.bravo]: 'Bravo',
++    [ids.charlie]: 'Charlie',
++    [ids.delta]: 'Delta',
++    [ids.echo]: 'Echo',
++  }
++
++  it('returns the four lists sorted by name, with their names', () => {
++    const result = normalizeFriendsSummary(summary, names)
++
++    expect(result.success).toBe(true)
++    expect(result.friends.map((entry) => entry.displayName)).toEqual([
++      'alpha',
++      'Bravo',
++    ])
++    expect(result.friends[1]).toEqual({
++      accountId: ids.bravo,
++      displayName: 'Bravo',
++      created: '2024-01-01T00:00:00Z',
++      mutual: 3,
++    })
++    expect(result.incoming[0].displayName).toBe('Charlie')
++    expect(result.outgoing[0].displayName).toBe('Delta')
++    expect(result.blocked[0].displayName).toBe('Echo')
++  })
++
++  it('drops duplicated ids and entries without an id', () => {
++    const result = normalizeFriendsSummary(
++      {
++        friends: [
++          { accountId: ids.alpha },
++          { accountId: ids.alpha },
++          {} as { accountId: string },
++        ],
++      },
++      names,
++    )
++
++    expect(result.friends).toHaveLength(1)
++    expect(result.incoming).toEqual([])
++    expect(result.blocked).toEqual([])
++  })
++
++  it('collects every id once to resolve the names', () => {
++    expect(
++      getFriendsSummaryAccountIds({
++        ...summary,
++        incoming: [{ accountId: ids.alpha }],
++      }).toSorted(),
++    ).toEqual([ids.alpha, ids.bravo, ids.delta, ids.echo])
++  })
++
++  it('puts entries without a name last', () => {
++    const result = normalizeFriendsSummary(summary, { [ids.bravo]: 'Bravo' })
++
++    expect(result.friends.map((entry) => entry.accountId)).toEqual([
++      ids.bravo,
++      ids.alpha,
++    ])
++  })
++})
++
++describe('getFriendDisplayName', () => {
++  it('uses a placeholder for empty names, the id or a hex id', () => {
++    expect(getFriendDisplayName(ids.alpha, '')).toBeNull()
++    expect(getFriendDisplayName(ids.alpha, '   ')).toBeNull()
++    expect(getFriendDisplayName(ids.alpha, undefined)).toBeNull()
++    expect(getFriendDisplayName(ids.alpha, ids.alpha.toUpperCase())).toBeNull()
++    expect(getFriendDisplayName(ids.alpha, ids.bravo)).toBeNull()
++  })
++
++  it('keeps a normal name', () => {
++    expect(getFriendDisplayName(ids.alpha, ' Player One ')).toBe('Player One')
++  })
++})
++
++describe('helpers', () => {
++  it('splits 250 ids into batches of 100', () => {
++    const list = Array.from({ length: 250 }, (_, index) => `${index}`)
++
++    expect(chunk(list, 100).map((batch) => batch.length)).toEqual([
++      100, 100, 50,
++    ])
++  })
++
++  it('repeats the accountId key in the names query', () => {
++    expect(buildAccountIdsQuery(['a', 'b'])).toBe('accountId=a&accountId=b')
++  })
++
++  it('recognises account ids in any case', () => {
++    expect(isEpicAccountId('0123456789abcdef0123456789ABCDEF')).toBe(true)
++    expect(isEpicAccountId(' 0123456789abcdef0123456789abcdef ')).toBe(true)
++    expect(isEpicAccountId('0123456789abcdef')).toBe(false)
++    expect(isEpicAccountId('g'.repeat(32))).toBe(false)
++    expect(isEpicAccountId('PlayerOne')).toBe(false)
++  })
++})
++
++describe('filterFriends', () => {
++  const entries = normalizeFriendsSummary(
++    { friends: [{ accountId: ids.alpha }, { accountId: ids.bravo }] },
++    { [ids.alpha]: 'Alpha Wolf', [ids.bravo]: 'Bravo' },
++  ).friends
++
++  it('finds by part of the name or the id, ignoring case', () => {
++    expect(filterFriends(entries, 'WOLF').map((e) => e.accountId)).toEqual([
++      ids.alpha,
++    ])
++    expect(filterFriends(entries, 'BBB').map((e) => e.accountId)).toEqual([
++      ids.bravo,
++    ])
++  })
++
++  it('returns the whole list for an empty query', () => {
++    expect(filterFriends(entries, '')).toBe(entries)
++    expect(filterFriends(entries, '   ')).toBe(entries)
++  })
++})
++
++describe('applyFriendsAction', () => {
++  const lists: FriendsLists = normalizeFriendsSummary(
++    {
++      friends: [{ accountId: ids.alpha }],
++      incoming: [{ accountId: ids.bravo }],
++      outgoing: [{ accountId: ids.charlie }],
++      blocklist: [{ accountId: ids.delta }],
++    },
++    {
++      [ids.alpha]: 'Alpha',
++      [ids.bravo]: 'Bravo',
++      [ids.charlie]: 'Charlie',
++      [ids.delta]: 'Delta',
++    },
++  )
++
++  it('moves an accepted request to the friends', () => {
++    const result = applyFriendsAction(lists, 'accept', ids.bravo)
++
++    expect(result.incoming).toEqual([])
++    expect(result.friends.map((entry) => entry.displayName)).toEqual([
++      'Alpha',
++      'Bravo',
++    ])
++  })
++
++  it('moves a blocked friend to the blocked list', () => {
++    const result = applyFriendsAction(lists, 'block', ids.alpha)
++
++    expect(result.friends).toEqual([])
++    expect(result.blocked.map((entry) => entry.displayName)).toEqual([
++      'Alpha',
++      'Delta',
++    ])
++  })
++
++  it('removes the entry from its list for the other actions', () => {
++    expect(applyFriendsAction(lists, 'remove', ids.alpha).friends).toEqual([])
++    expect(applyFriendsAction(lists, 'reject', ids.bravo).incoming).toEqual([])
++    expect(applyFriendsAction(lists, 'cancel', ids.charlie).outgoing).toEqual(
++      [],
++    )
++    expect(applyFriendsAction(lists, 'unblock', ids.delta).blocked).toEqual([])
++  })
++})
+diff --git a/src/lib/parsers/friends.ts b/src/lib/parsers/friends.ts
+new file mode 100644
+index 0000000..6bd536f
+--- /dev/null
++++ b/src/lib/parsers/friends.ts
+@@ -0,0 +1,245 @@
++import type {
++  FriendsActionType,
++  FriendsEntry,
++  FriendsLists,
++  FriendsListType,
++  FriendsSummary,
++} from '../../types/friends-list'
++import type {
++  FriendsSummaryEntry,
++  FriendsSummaryResponse,
++} from '../../types/services/friends'
++
++import { friendsListTypes } from '../../config/constants/friends'
++
++/**
++ * Pure helpers of the Epic friends page, shared by the main process and the
++ * renderer.
++ */
++
++const accountIdPattern = /^[0-9a-f]{32}$/i
++
++export function isEpicAccountId(value: string) {
++  return accountIdPattern.test(value.trim())
++}
++
++/**
++ * Epic sometimes returns no name, or the account id as the name: those show
++ * a placeholder instead (null).
++ */
++export function getFriendDisplayName(
++  accountId: string,
++  displayName?: string | null,
++) {
++  const name = displayName?.trim() ?? ''
++
++  if (
++    name === '' ||
++    name.toLowerCase() === accountId.toLowerCase() ||
++    accountIdPattern.test(name)
++  ) {
++    return null
++  }
++
++  return name
++}
++
++export function chunk<T>(list: Array<T>, size: number) {
++  const result: Array<Array<T>> = []
++
++  for (let index = 0; index < list.length; index += size) {
++    result.push(list.slice(index, index + size))
++  }
++
++  return result
++}
++
++/**
++ * `accountId=a&accountId=b`: the account service wants the key repeated,
++ * not the `accountId[]=` that axios builds from an array.
++ */
++export function buildAccountIdsQuery(accountIds: Array<string>) {
++  return accountIds
++    .map((accountId) => `accountId=${encodeURIComponent(accountId)}`)
++    .join('&')
++}
++
++export function compareFriendsEntries(
++  entryA: FriendsEntry,
++  entryB: FriendsEntry,
++) {
++  // Unnamed entries go last
++  if (entryA.displayName === null || entryB.displayName === null) {
++    if (entryA.displayName === entryB.displayName) {
++      return entryA.accountId.localeCompare(entryB.accountId)
++    }
++
++    return entryA.displayName === null ? 1 : -1
++  }
++
++  return (
++    entryA.displayName.localeCompare(entryB.displayName, undefined, {
++      sensitivity: 'base',
++    }) || entryA.accountId.localeCompare(entryB.accountId)
++  )
++}
++
++export function createEmptyFriendsLists(): FriendsLists {
++  return {
++    friends: [],
++    incoming: [],
++    outgoing: [],
++    blocked: [],
++  }
++}
++
++export function createEmptyFriendsSummary(): FriendsSummary {
++  return {
++    success: true,
++    ...createEmptyFriendsLists(),
++  }
++}
++
++function summaryLists(
++  summary: FriendsSummaryResponse,
++): Record<FriendsListType, Array<Partial<FriendsSummaryEntry>>> {
++  return {
++    friends: summary.friends ?? [],
++    incoming: summary.incoming ?? [],
++    outgoing: summary.outgoing ?? [],
++    blocked: summary.blocklist ?? [],
++  }
++}
++
++/**
++ * Every account id of the summary, once, to resolve their names.
++ */
++export function getFriendsSummaryAccountIds(
++  summary: FriendsSummaryResponse,
++) {
++  const accountIds = new Set<string>()
++
++  Object.values(summaryLists(summary)).forEach((list) =>
++    list.forEach((entry) => {
++      if (entry?.accountId) {
++        accountIds.add(entry.accountId)
++      }
++    }),
++  )
++
++  return [...accountIds]
++}
++
++export function normalizeFriendsSummary(
++  summary: FriendsSummaryResponse,
++  names: Record<string, string>,
++): FriendsSummary {
++  const result = createEmptyFriendsSummary()
++  const lists = summaryLists(summary)
++
++  friendsListTypes.forEach((type) => {
++    const seen = new Set<string>()
++
++    result[type] = lists[type]
++      .filter((entry) => {
++        if (!entry?.accountId || seen.has(entry.accountId)) {
++          return false
++        }
++
++        seen.add(entry.accountId)
++
++        return true
++      })
++      .map((entry) => {
++        const accountId = entry.accountId as string
++
++        return {
++          accountId,
++          displayName: getFriendDisplayName(accountId, names[accountId]),
++          created: entry.created ?? null,
++          mutual: typeof entry.mutual === 'number' ? entry.mutual : null,
++        }
++      })
++      .toSorted(compareFriendsEntries)
++  })
++
++  return result
++}
++
++export function filterFriends(entries: Array<FriendsEntry>, query: string) {
++  const value = query.trim().toLowerCase()
++
++  if (value === '') {
++    return entries
++  }
++
++  return entries.filter(
++    (entry) =>
++      entry.accountId.toLowerCase().includes(value) ||
++      (entry.displayName?.toLowerCase().includes(value) ?? false),
++  )
++}
++
++/**
++ * The list a successful action leaves, without reloading the summary.
++ * `add` is not handled here: the page reloads to show the new request.
++ */
++export function applyFriendsAction(
++  lists: FriendsLists,
++  type: Exclude<FriendsActionType, 'add'>,
++  accountId: string,
++): FriendsLists {
++  const without = (list: Array<FriendsEntry>) =>
++    list.filter((entry) => entry.accountId !== accountId)
++  const find = () =>
++    friendsListTypes
++      .map((listType) => lists[listType])
++      .flat()
++      .find((entry) => entry.accountId === accountId) ?? {
++      accountId,
++      displayName: null,
++      created: null,
++      mutual: null,
++    }
++
++  switch (type) {
++    case 'accept': {
++      const entry = lists.incoming.find(
++        (current) => current.accountId === accountId,
++      )
++
++      return {
++        ...lists,
++        incoming: without(lists.incoming),
++        friends: entry
++          ? [...without(lists.friends), entry].toSorted(compareFriendsEntries)
++          : lists.friends,
++      }
++    }
++
++    case 'block': {
++      const entry = find()
++
++      return {
++        friends: without(lists.friends),
++        incoming: without(lists.incoming),
++        outgoing: without(lists.outgoing),
++        blocked: [...without(lists.blocked), entry].toSorted(
++          compareFriendsEntries,
++        ),
++      }
++    }
++
++    case 'remove':
++      return { ...lists, friends: without(lists.friends) }
++
++    case 'reject':
++      return { ...lists, incoming: without(lists.incoming) }
++
++    case 'cancel':
++      return { ...lists, outgoing: without(lists.outgoing) }
++
++    case 'unblock':
++      return { ...lists, blocked: without(lists.blocked) }
++  }
++}
+diff --git a/src/lib/parsers/party-info.test.ts b/src/lib/parsers/party-info.test.ts
+new file mode 100644
+index 0000000..220fe16
+--- /dev/null
++++ b/src/lib/parsers/party-info.test.ts
+@@ -0,0 +1,176 @@
++import type { PartyData } from '../../types/services/party'
++
++import { describe, expect, it } from 'vitest'
++
++import { PartyRole } from '../../config/constants/fortnite/party'
++
++import {
++  buildPartyPrivacyPatch,
++  getPartyLeaderId,
++  getPartyMembersWithoutName,
++  parsePartyInfo,
++} from './party-info'
++
++const ids = {
++  leader: 'a'.repeat(32),
++  first: 'b'.repeat(32),
++  second: 'c'.repeat(32),
++}
++
++function member(
++  accountId: string,
++  role: PartyRole,
++  joinedAt: string,
++  name?: string,
++): PartyData['members'][number] {
++  return {
++    account_id: accountId,
++    meta: name ? { 'urn:epic:member:dn_s': name } : {},
++    connections: [],
++    revision: 0,
++    updated_at: joinedAt,
++    joined_at: joinedAt,
++    role,
++  }
++}
++
++function party(
++  joinability: PartyData['config']['joinability'],
++  meta: Record<string, string> = {},
++): PartyData {
++  return {
++    id: 'party-id',
++    created_at: '2026-01-01T00:00:00Z',
++    updated_at: '2026-01-01T00:00:00Z',
++    config: {
++      type: 'DEFAULT',
++      joinability,
++      discoverability: joinability === 'OPEN' ? 'ALL' : 'INVITED_ONLY',
++      sub_type: 'default',
++      max_size: 4,
++      invite_ttl: 14400,
++      join_confirmation: false,
++      intention_ttl: 60,
++    },
++    members: [
++      member(ids.second, PartyRole.MEMBER, '2026-01-01T00:03:00Z'),
++      member(ids.leader, PartyRole.CAPTAIN, '2026-01-01T00:02:00Z', 'Leader'),
++      member(ids.first, PartyRole.MEMBER, '2026-01-01T00:01:00Z', 'First'),
++    ],
++    applicants: [],
++    meta,
++    invites: [],
++    revision: 12,
++    intentions: [],
++  }
++}
++
++describe('parsePartyInfo', () => {
++  it('puts the leader first, then the members by join date', () => {
++    const result = parsePartyInfo(party('OPEN'), { [ids.second]: 'Second' })
++
++    expect(result.members.map((current) => current.displayName)).toEqual([
++      'Leader',
++      'First',
++      'Second',
++    ])
++    expect(result.members[0].isLeader).toBe(true)
++    expect(result.size).toBe(3)
++    expect(result.maxSize).toBe(4)
++    expect(result.partyId).toBe('party-id')
++  })
++
++  it('reads the privacy from the joinability', () => {
++    expect(parsePartyInfo(party('OPEN')).isPrivate).toBe(false)
++    expect(parsePartyInfo(party('INVITE_AND_FORMER')).isPrivate).toBe(true)
++  })
++
++  it('lists the members without a name and finds the leader', () => {
++    expect(getPartyMembersWithoutName(party('OPEN'))).toEqual([ids.second])
++    expect(getPartyLeaderId(party('OPEN'))).toBe(ids.leader)
++    expect(parsePartyInfo(party('OPEN')).members[2].displayName).toBeNull()
++  })
++})
++
++describe('buildPartyPrivacyPatch', () => {
++  const privacyMeta = {
++    'Default:PrivacySettings_j': JSON.stringify({
++      PrivacySettings: {
++        partyType: 'Public',
++        partyInviteRestriction: 'AnyMember',
++        bOnlyLeaderFriendsCanJoin: false,
++        bUseCustomPrivacy: true,
++      },
++    }),
++  }
++
++  it('builds the private preset', () => {
++    const body = buildPartyPrivacyPatch(party('OPEN', privacyMeta), true)
++
++    expect(body.config).toEqual({
++      join_confirmation: false,
++      joinability: 'INVITE_AND_FORMER',
++      max_size: 4,
++      discoverability: 'INVITED_ONLY',
++    })
++    expect(body.party_privacy_type).toBe('INVITE_AND_FORMER')
++    expect(body.revision).toBe(12)
++    expect(body.meta.delete).toEqual(['urn:epic:cfg:not-accepting-members'])
++    expect(body.meta.update).toMatchObject({
++      'urn:epic:cfg:presence-perm_s': 'Noone',
++      'urn:epic:cfg:accepting-members_b': 'false',
++      'urn:epic:cfg:invite-perm_s': 'Leader',
++      'urn:epic:cfg:not-accepting-members-reason_i': '7',
++    })
++    expect(
++      JSON.parse(body.meta.update['Default:PrivacySettings_j']),
++    ).toEqual({
++      PrivacySettings: {
++        partyType: 'Private',
++        partyInviteRestriction: 'LeaderOnly',
++        bOnlyLeaderFriendsCanJoin: true,
++        bUseCustomPrivacy: true,
++      },
++    })
++    expect(body).toMatchObject({
++      party_type: 'DEFAULT',
++      party_sub_type: 'default',
++      max_number_of_members: 4,
++      invite_ttl_seconds: 14400,
++      party_state_overridden: {},
++    })
++  })
++
++  it('builds the public preset', () => {
++    const body = buildPartyPrivacyPatch(
++      party('INVITE_AND_FORMER', privacyMeta),
++      false,
++    )
++
++    expect(body.config.joinability).toBe('OPEN')
++    expect(body.config.discoverability).toBe('ALL')
++    expect(body.party_privacy_type).toBe('OPEN')
++    expect(body.meta.delete).toEqual([
++      'urn:epic:cfg:not-accepting-members-reason_i',
++    ])
++    expect(body.meta.update).toEqual({
++      'Default:PrivacySettings_j': JSON.stringify({
++        PrivacySettings: {
++          partyType: 'Public',
++          partyInviteRestriction: 'AnyMember',
++          bOnlyLeaderFriendsCanJoin: false,
++          bUseCustomPrivacy: true,
++        },
++      }),
++      'urn:epic:cfg:presence-perm_s': 'Anyone',
++      'urn:epic:cfg:accepting-members_b': 'true',
++      'urn:epic:cfg:invite-perm_s': 'Anyone',
++    })
++  })
++
++  it('does not add the privacy settings when the party has none', () => {
++    const body = buildPartyPrivacyPatch(party('OPEN'), true)
++
++    expect(body.meta.update['Default:PrivacySettings_j']).toBeUndefined()
++  })
++})
+diff --git a/src/lib/parsers/party-info.ts b/src/lib/parsers/party-info.ts
+new file mode 100644
+index 0000000..97a0baa
+--- /dev/null
++++ b/src/lib/parsers/party-info.ts
+@@ -0,0 +1,142 @@
++import type { PartyInfoData } from '../../types/party-info'
++import type { PartyData, PartyPatchBody } from '../../types/services/party'
++
++import { PartyRole } from '../../config/constants/fortnite/party'
++
++import { getFriendDisplayName } from './friends'
++
++/**
++ * Pure helpers of the party status card.
++ */
++
++export const partyMemberNameKey = 'urn:epic:member:dn_s'
++const privacySettingsKey = 'Default:PrivacySettings_j'
++
++export function isPartyPrivate(party: Pick<PartyData, 'config'>) {
++  return party.config.joinability !== 'OPEN'
++}
++
++/**
++ * Members without a name in their party meta, to resolve them.
++ */
++export function getPartyMembersWithoutName(party: PartyData) {
++  return party.members
++    .filter(
++      (member) =>
++        getFriendDisplayName(
++          member.account_id,
++          member.meta?.[partyMemberNameKey] as string | undefined,
++        ) === null,
++    )
++    .map((member) => member.account_id)
++}
++
++/**
++ * Leader first, then the others in the order they joined.
++ */
++export function parsePartyInfo(
++  party: PartyData,
++  names: Record<string, string> = {},
++): PartyInfoData {
++  const members = party.members
++    .map((member) => ({
++      accountId: member.account_id,
++      displayName:
++        getFriendDisplayName(
++          member.account_id,
++          member.meta?.[partyMemberNameKey] as string | undefined,
++        ) ?? getFriendDisplayName(member.account_id, names[member.account_id]),
++      isLeader: member.role === PartyRole.CAPTAIN,
++      joinedAt: member.joined_at ?? null,
++    }))
++    .toSorted((memberA, memberB) => {
++      if (memberA.isLeader !== memberB.isLeader) {
++        return memberA.isLeader ? -1 : 1
++      }
++
++      return (memberA.joinedAt ?? '').localeCompare(memberB.joinedAt ?? '')
++    })
++
++  return {
++    partyId: party.id,
++    size: members.length,
++    maxSize: party.config.max_size,
++    isPrivate: isPartyPrivate(party),
++    members,
++  }
++}
++
++export function getPartyLeaderId(party: PartyData) {
++  return (
++    party.members.find((member) => member.role === PartyRole.CAPTAIN)
++      ?.account_id ?? null
++  )
++}
++
++/**
++ * Body of the party PATCH that changes its privacy, the same fields the
++ * game client sends for the public and private presets.
++ */
++export function buildPartyPrivacyPatch(
++  party: PartyData,
++  makePrivate: boolean,
++): PartyPatchBody {
++  const update: Record<string, string> = {}
++  const remove: Array<string> = []
++  const currentPrivacy = party.meta?.[privacySettingsKey]
++
++  if (currentPrivacy !== undefined) {
++    let parsed: { PrivacySettings?: Record<string, unknown> } = {}
++
++    try {
++      parsed = JSON.parse(currentPrivacy) ?? {}
++
++      // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    } catch (error) {
++      //
++    }
++
++    update[privacySettingsKey] = JSON.stringify({
++      ...parsed,
++      PrivacySettings: {
++        ...(parsed.PrivacySettings ?? {}),
++        partyType: makePrivate ? 'Private' : 'Public',
++        bOnlyLeaderFriendsCanJoin: makePrivate,
++        partyInviteRestriction: makePrivate ? 'LeaderOnly' : 'AnyMember',
++      },
++    })
++  }
++
++  update['urn:epic:cfg:presence-perm_s'] = makePrivate ? 'Noone' : 'Anyone'
++  update['urn:epic:cfg:accepting-members_b'] = makePrivate ? 'false' : 'true'
++  update['urn:epic:cfg:invite-perm_s'] = makePrivate ? 'Leader' : 'Anyone'
++
++  if (makePrivate) {
++    remove.push('urn:epic:cfg:not-accepting-members')
++    update['urn:epic:cfg:not-accepting-members-reason_i'] = '7'
++  } else {
++    remove.push('urn:epic:cfg:not-accepting-members-reason_i')
++  }
++
++  const joinability = makePrivate ? 'INVITE_AND_FORMER' : 'OPEN'
++
++  return {
++    config: {
++      join_confirmation: party.config.join_confirmation,
++      joinability,
++      max_size: party.config.max_size,
++      discoverability: makePrivate ? 'INVITED_ONLY' : 'ALL',
++    },
++    meta: {
++      delete: remove,
++      update,
++    },
++    party_state_overridden: {},
++    party_privacy_type: joinability,
++    party_type: party.config.type,
++    party_sub_type: party.config.sub_type,
++    max_number_of_members: party.config.max_size,
++    invite_ttl_seconds: party.config.invite_ttl,
++    revision: party.revision,
++  }
++}
+diff --git a/src/lib/validations/schemas/settings.ts b/src/lib/validations/schemas/settings.ts
+index dcb33a3..e910680 100644
+--- a/src/lib/validations/schemas/settings.ts
++++ b/src/lib/validations/schemas/settings.ts
+@@ -68,6 +68,7 @@ export const customizableMenuSettingsSchema = z
+ 
+     accountManagement: z.boolean().default(true),
+     vbucksInformation: z.boolean().default(true),
++    friends: z.boolean().default(true),
+     redeemCodes: z.boolean().default(true),
+     devicesAuth: z.boolean().default(true),
+     epicGamesSettings: z.boolean().default(true),
+diff --git a/src/locales/en-US/account-management/friends.json b/src/locales/en-US/account-management/friends.json
+new file mode 100644
+index 0000000..0d23e69
+--- /dev/null
++++ b/src/locales/en-US/account-management/friends.json
+@@ -0,0 +1,103 @@
++{
++  "subtitle": "Epic Games friends and friend requests of the selected account.",
++  "no-account": "Select an account to see its friends",
++  "reload": "Reload",
++  "player": "Player",
++  "load-failed": "Could not load the friends",
++  "retry": "Retry",
++  "tabs": {
++    "friends": "Friends",
++    "incoming": "Received",
++    "outgoing": "Sent",
++    "blocked": "Blocked"
++  },
++  "search": {
++    "placeholder": "Search by name or account ID",
++    "clear": "Clear search",
++    "shown": "{{shown}} of {{total}}"
++  },
++  "empty": {
++    "friends": "This account has no friends yet",
++    "incoming": "No friend requests received",
++    "outgoing": "No friend requests sent",
++    "blocked": "No blocked players",
++    "no-matches": "No player matches the search"
++  },
++  "add": {
++    "placeholder": "Display name or account ID",
++    "submit": "Send request",
++    "success": "Friend request sent to {{name}}"
++  },
++  "copy-id": "Copy account ID",
++  "copied": "Account ID copied",
++  "actions": {
++    "accept": "Accept",
++    "reject": "Reject",
++    "cancel": "Cancel",
++    "remove": "Remove",
++    "block": "Block",
++    "unblock": "Unblock"
++  },
++  "results": {
++    "accept": "Friend request from {{name}} accepted",
++    "reject": "Friend request from {{name}} rejected",
++    "cancel": "Friend request to {{name}} cancelled",
++    "remove": "{{name}} was removed from friends",
++    "block": "{{name}} was blocked",
++    "unblock": "{{name}} was unblocked",
++    "error": "Error: {{error}}"
++  },
++  "confirm": {
++    "keep": "Keep",
++    "reject": {
++      "title": "Reject friend request?",
++      "description": "The request from {{name}} will be removed."
++    },
++    "cancel": {
++      "title": "Cancel friend request?",
++      "description": "The request sent to {{name}} will be removed."
++    },
++    "remove": {
++      "title": "Remove friend?",
++      "description": "{{name}} will be removed from the Epic Games friends of {{account}}."
++    },
++    "block": {
++      "title": "Block player?",
++      "description": "{{name}} will be removed from friends and requests and blocked on {{account}}. You can unblock them later from the Blocked tab."
++    }
++  },
++  "bulk": {
++    "remove": "Remove all",
++    "accept": "Accept all",
++    "reject": "Reject all",
++    "cancel": "Cancel all",
++    "stop": "Stop",
++    "progress": "{{current}} / {{total}}",
++    "stopping": "Stopping after the current request…",
++    "done": "{{done}} of {{total}} done",
++    "done-with-errors": "{{done}} of {{total}} done, {{failed}} failed",
++    "confirm": {
++      "remove": {
++        "title": "Remove all friends?",
++        "description_one": "{{count}} friend will be removed from {{account}}.",
++        "description_other": "{{count}} friends will be removed from {{account}}."
++      },
++      "accept": {
++        "title": "Accept all friend requests?",
++        "description_one": "{{count}} friend request will be accepted on {{account}}.",
++        "description_other": "{{count}} friend requests will be accepted on {{account}}."
++      },
++      "reject": {
++        "title": "Reject all friend requests?",
++        "description_one": "{{count}} friend request will be rejected on {{account}}.",
++        "description_other": "{{count}} friend requests will be rejected on {{account}}."
++      },
++      "cancel": {
++        "title": "Cancel all sent friend requests?",
++        "description_one": "{{count}} friend request sent from {{account}} will be cancelled.",
++        "description_other": "{{count}} friend requests sent from {{account}} will be cancelled."
++      },
++      "note": "It applies to the whole list, not only the search results. There is a one second wait between requests, and you can stop it at any time."
++    }
++  }
++}
+diff --git a/src/locales/en-US/sidebar.json b/src/locales/en-US/sidebar.json
+index 4a0b069..bd2f2fe 100644
+--- a/src/locales/en-US/sidebar.json
++++ b/src/locales/en-US/sidebar.json
+@@ -24,6 +24,7 @@
+     "title": "Account Management",
+     "options": {
+       "vbucks-information": "V-Bucks Information",
++      "friends": "Epic Games Friends",
+       "redeem-codes": "Redeem Codes",
+       "devices-auth": "Devices Auth",
+       "epic-settings": "Epic Games Settings"
+diff --git a/src/locales/en-US/stw-operations/party.json b/src/locales/en-US/stw-operations/party.json
+index c5849dd..9c63612 100644
+--- a/src/locales/en-US/stw-operations/party.json
++++ b/src/locales/en-US/stw-operations/party.json
+@@ -56,5 +56,55 @@
+         "sent_other": "{{count}} friend requests were sent"
+       }
+     }
++  },
++  "status": {
++    "title": "Party status",
++    "description": "Party of the selected account in the header.",
++    "no-account": "Select an account to see its party",
++    "loading": "Looking for the party…",
++    "no-party": "The account is not in a party",
++    "not-found": "Party not found",
++    "error": "Could not load the party: {{error}}",
++    "retry-in": "Retrying in {{seconds}} s",
++    "refresh": "Refresh",
++    "summary_one": "{{count}}/{{max}} member",
++    "summary_other": "{{count}}/{{max}} members",
++    "private": "Private",
++    "public": "Public",
++    "leader": "Leader",
++    "you": "you",
++    "player": "Player",
++    "leader-only": "Only the party leader can use these actions",
++    "member": {
++      "label": "Member",
++      "placeholder": "Select a member",
++      "empty": "No other members"
++    },
++    "actions": {
++      "promote": "Promote",
++      "kick": "Kick",
++      "privacy": "Private party",
++      "fix-invite": "Fix invite"
++    },
++    "fix-invite-description": "Switches the privacy for 5 seconds and restores it, so invites from the game work again.",
++    "results": {
++      "promote": "{{name}} is the new party leader",
++      "kick": "{{name}} was kicked",
++      "private": "The party is private now",
++      "public": "The party is public now",
++      "fix-invite": "Invites fixed",
++      "error": "Error: {{error}}"
++    },
++    "confirm": {
++      "keep": "Keep",
++      "promote": {
++        "title": "Promote to leader?",
++        "description": "{{name}} will be the party leader and {{account}} will lose the leader actions."
++      },
++      "kick": {
++        "title": "Kick from the party?",
++        "description": "{{name}} will be kicked from the party of {{account}}."
++      }
++    }
+   }
+ }
+diff --git a/src/locales/es-419/account-management/friends.json b/src/locales/es-419/account-management/friends.json
+new file mode 100644
+index 0000000..b5c4ec3
+--- /dev/null
++++ b/src/locales/es-419/account-management/friends.json
+@@ -0,0 +1,103 @@
++{
++  "subtitle": "Amigos y solicitudes de amistad de Epic Games de la cuenta seleccionada.",
++  "no-account": "Selecciona una cuenta para ver sus amigos",
++  "reload": "Recargar",
++  "player": "Jugador",
++  "load-failed": "No se pudieron cargar los amigos",
++  "retry": "Reintentar",
++  "tabs": {
++    "friends": "Amigos",
++    "incoming": "Recibidas",
++    "outgoing": "Enviadas",
++    "blocked": "Bloqueados"
++  },
++  "search": {
++    "placeholder": "Buscar por nombre o ID de cuenta",
++    "clear": "Limpiar búsqueda",
++    "shown": "{{shown}} de {{total}}"
++  },
++  "empty": {
++    "friends": "Esta cuenta todavía no tiene amigos",
++    "incoming": "No hay solicitudes recibidas",
++    "outgoing": "No hay solicitudes enviadas",
++    "blocked": "No hay jugadores bloqueados",
++    "no-matches": "Ningún jugador coincide con la búsqueda"
++  },
++  "add": {
++    "placeholder": "Nombre o ID de cuenta",
++    "submit": "Enviar solicitud",
++    "success": "Solicitud de amistad enviada a {{name}}"
++  },
++  "copy-id": "Copiar ID de cuenta",
++  "copied": "ID de cuenta copiado",
++  "actions": {
++    "accept": "Aceptar",
++    "reject": "Rechazar",
++    "cancel": "Cancelar",
++    "remove": "Quitar",
++    "block": "Bloquear",
++    "unblock": "Desbloquear"
++  },
++  "results": {
++    "accept": "Solicitud de {{name}} aceptada",
++    "reject": "Solicitud de {{name}} rechazada",
++    "cancel": "Solicitud a {{name}} cancelada",
++    "remove": "{{name}} ya no está en tus amigos",
++    "block": "{{name}} fue bloqueado",
++    "unblock": "{{name}} fue desbloqueado",
++    "error": "Error: {{error}}"
++  },
++  "confirm": {
++    "keep": "Volver",
++    "reject": {
++      "title": "¿Rechazar la solicitud?",
++      "description": "Se eliminará la solicitud de {{name}}."
++    },
++    "cancel": {
++      "title": "¿Cancelar la solicitud?",
++      "description": "Se eliminará la solicitud enviada a {{name}}."
++    },
++    "remove": {
++      "title": "¿Quitar de amigos?",
++      "description": "{{name}} dejará de ser amigo de {{account}} en Epic Games."
++    },
++    "block": {
++      "title": "¿Bloquear al jugador?",
++      "description": "{{name}} se quitará de amigos y solicitudes y quedará bloqueado en {{account}}. Puedes desbloquearlo después desde la pestaña Bloqueados."
++    }
++  },
++  "bulk": {
++    "remove": "Quitar todos",
++    "accept": "Aceptar todas",
++    "reject": "Rechazar todas",
++    "cancel": "Cancelar todas",
++    "stop": "Detener",
++    "progress": "{{current}} / {{total}}",
++    "stopping": "Deteniendo tras la petición en curso…",
++    "done": "{{done}} de {{total}} hechas",
++    "done-with-errors": "{{done}} de {{total}} hechas, {{failed}} con error",
++    "confirm": {
++      "remove": {
++        "title": "¿Quitar a todos los amigos?",
++        "description_one": "Se quitará {{count}} amigo de {{account}}.",
++        "description_other": "Se quitarán {{count}} amigos de {{account}}."
++      },
++      "accept": {
++        "title": "¿Aceptar todas las solicitudes?",
++        "description_one": "Se aceptará {{count}} solicitud en {{account}}.",
++        "description_other": "Se aceptarán {{count}} solicitudes en {{account}}."
++      },
++      "reject": {
++        "title": "¿Rechazar todas las solicitudes?",
++        "description_one": "Se rechazará {{count}} solicitud en {{account}}.",
++        "description_other": "Se rechazarán {{count}} solicitudes en {{account}}."
++      },
++      "cancel": {
++        "title": "¿Cancelar todas las solicitudes enviadas?",
++        "description_one": "Se cancelará {{count}} solicitud enviada desde {{account}}.",
++        "description_other": "Se cancelarán {{count}} solicitudes enviadas desde {{account}}."
++      },
++      "note": "Se aplica a toda la lista, no solo a los resultados de la búsqueda. Hay un segundo de espera entre peticiones y puedes detenerlo en cualquier momento."
++    }
++  }
++}
+diff --git a/src/locales/es-419/general.json b/src/locales/es-419/general.json
+index b762c96..0b9192c 100644
+--- a/src/locales/es-419/general.json
++++ b/src/locales/es-419/general.json
+@@ -1,4 +1,5 @@
+ {
++  "feature-unavailable": "Temporalmente no disponible",
+   "actions": {
+     "add": "Añadir",
+     "change": "Cambiar",
+diff --git a/src/locales/es-419/sidebar.json b/src/locales/es-419/sidebar.json
+index 5e338ce..0f61162 100644
+--- a/src/locales/es-419/sidebar.json
++++ b/src/locales/es-419/sidebar.json
+@@ -24,6 +24,7 @@
+     "title": "Administrar Cuenta",
+     "options": {
+       "vbucks-information": "Información de V-Bucks",
++      "friends": "Amigos de Epic Games",
+       "redeem-codes": "Reclamar Códigos",
+       "devices-auth": "Autenticación de Dispositivos",
+       "epic-settings": "Configuración de Epic Games"
+diff --git a/src/locales/es-419/stw-operations/party.json b/src/locales/es-419/stw-operations/party.json
+index c07edec..6b221ce 100644
+--- a/src/locales/es-419/stw-operations/party.json
++++ b/src/locales/es-419/stw-operations/party.json
+@@ -56,5 +56,55 @@
+         "sent_other": "{{count}} peticiones de amistad enviadas"
+       }
+     }
++  },
++  "status": {
++    "title": "Estado del grupo",
++    "description": "Grupo de la cuenta seleccionada en la cabecera.",
++    "no-account": "Selecciona una cuenta para ver su grupo",
++    "loading": "Buscando el grupo…",
++    "no-party": "La cuenta no está en ningún grupo",
++    "not-found": "No se encontró el grupo",
++    "error": "No se pudo cargar el grupo: {{error}}",
++    "retry-in": "Reintentando en {{seconds}} s",
++    "refresh": "Refrescar",
++    "summary_one": "{{count}}/{{max}} miembro",
++    "summary_other": "{{count}}/{{max}} miembros",
++    "private": "Privado",
++    "public": "Público",
++    "leader": "Líder",
++    "you": "tú",
++    "player": "Jugador",
++    "leader-only": "Solo el líder del grupo puede usar estas acciones",
++    "member": {
++      "label": "Miembro",
++      "placeholder": "Selecciona un miembro",
++      "empty": "No hay otros miembros"
++    },
++    "actions": {
++      "promote": "Promover",
++      "kick": "Expulsar",
++      "privacy": "Grupo privado",
++      "fix-invite": "Arreglar invitación"
++    },
++    "fix-invite-description": "Cambia la privacidad durante 5 segundos y la restaura, para que las invitaciones del juego vuelvan a funcionar.",
++    "results": {
++      "promote": "{{name}} es el nuevo líder del grupo",
++      "kick": "{{name}} fue expulsado",
++      "private": "El grupo ahora es privado",
++      "public": "El grupo ahora es público",
++      "fix-invite": "Invitaciones arregladas",
++      "error": "Error: {{error}}"
++    },
++    "confirm": {
++      "keep": "Volver",
++      "promote": {
++        "title": "¿Promover a líder?",
++        "description": "{{name}} será el líder del grupo y {{account}} perderá las acciones de líder."
++      },
++      "kick": {
++        "title": "¿Expulsar del grupo?",
++        "description": "{{name}} será expulsado del grupo de {{account}}."
++      }
++    }
+   }
+ }
+diff --git a/src/locales/resources.ts b/src/locales/resources.ts
+index 0420432..65d33b8 100644
+--- a/src/locales/resources.ts
++++ b/src/locales/resources.ts
+@@ -22,6 +22,7 @@ import enUS_stwOperations_XPBoosts from './en-US/stw-operations/xpboosts.json'
+ import enUS_stwOperations_Llamas from './en-US/stw-operations/llamas.json'
+ import enUS_stwOperations_Unlock from './en-US/stw-operations/unlock.json'
+ import enUS_accountManagement_VBucksInformation from './en-US/account-management/vbucks-information.json'
++import enUS_accountManagement_Friends from './en-US/account-management/friends.json'
+ import enUS_accountManagement_EULA from './en-US/account-management/eula.json'
+ import enUS_accountManagement_RedeemCodes from './en-US/account-management/redeem-codes.json'
+ import enUS_accountManagement_DevicesAuth from './en-US/account-management/devices-auth.json'
+@@ -57,6 +58,7 @@ const enUS = {
+   },
+   'account-management': {
+     'vbucks-information': enUS_accountManagement_VBucksInformation,
++    friends: enUS_accountManagement_Friends,
+     'redeem-codes': enUS_accountManagement_RedeemCodes,
+     'devices-auth': enUS_accountManagement_DevicesAuth,
+     'epic-settings': enUS_accountManagement_EpicSettings,
+@@ -97,6 +99,7 @@ import es419_stwOperations_XPBoosts from './es-419/stw-operations/xpboosts.json'
+ import es419_stwOperations_Llamas from './es-419/stw-operations/llamas.json'
+ import es419_stwOperations_Unlock from './es-419/stw-operations/unlock.json'
+ import es419_accountManagement_VBucksInformation from './es-419/account-management/vbucks-information.json'
++import es419_accountManagement_Friends from './es-419/account-management/friends.json'
+ import es419_accountManagement_EULA from './es-419/account-management/eula.json'
+ import es419_accountManagement_RedeemCodes from './es-419/account-management/redeem-codes.json'
+ import es419_accountManagement_DevicesAuth from './es-419/account-management/devices-auth.json'
+@@ -132,6 +135,7 @@ const es419 = {
+   },
+   'account-management': {
+     'vbucks-information': es419_accountManagement_VBucksInformation,
++    friends: es419_accountManagement_Friends,
+     'redeem-codes': es419_accountManagement_RedeemCodes,
+     'devices-auth': es419_accountManagement_DevicesAuth,
+     'epic-settings': es419_accountManagement_EpicSettings,
+diff --git a/src/routeTree.gen.ts b/src/routeTree.gen.ts
+index c9e13fd..c9c2c65 100644
+--- a/src/routeTree.gen.ts
++++ b/src/routeTree.gen.ts
+@@ -31,6 +31,7 @@ import { Route as AdvancedModeMatchmakingTrackRouteImport } from './routes/advan
+ import { Route as AccountsRemoveRouteImport } from './routes/accounts/remove/route'
+ import { Route as AccountManagementVbucksInformationRouteImport } from './routes/account-management/vbucks-information/route'
+ import { Route as AccountManagementRedeemCodesRouteImport } from './routes/account-management/redeem-codes/route'
++import { Route as AccountManagementFriendsRouteImport } from './routes/account-management/friends/route'
+ import { Route as AccountManagementEulaRouteImport } from './routes/account-management/eula/route'
+ import { Route as AccountManagementEpicGamesSettingsRouteImport } from './routes/account-management/epic-games-settings/route'
+ import { Route as AccountManagementDevicesAuthRouteImport } from './routes/account-management/devices-auth/route'
+@@ -153,6 +154,12 @@ const AccountManagementRedeemCodesRouteRoute =
+     getParentRoute: () => rootRoute,
+   } as any)
+ 
++const AccountManagementFriendsRouteRoute =
++  AccountManagementFriendsRouteImport.update({
++    path: '/account-management/friends',
++    getParentRoute: () => rootRoute,
++  } as any)
++
+ const AccountManagementEulaRouteRoute = AccountManagementEulaRouteImport.update(
+   {
+     path: '/account-management/eula',
+@@ -201,6 +208,10 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof AccountManagementEulaRouteImport
+       parentRoute: typeof rootRoute
+     }
++    '/account-management/friends': {
++      preLoaderRoute: typeof AccountManagementFriendsRouteImport
++      parentRoute: typeof rootRoute
++    }
+     '/account-management/redeem-codes': {
+       preLoaderRoute: typeof AccountManagementRedeemCodesRouteImport
+       parentRoute: typeof rootRoute
+@@ -288,6 +299,7 @@ export const routeTree = rootRoute.addChildren([
+   AccountManagementDevicesAuthRouteRoute,
+   AccountManagementEpicGamesSettingsRouteRoute,
+   AccountManagementEulaRouteRoute,
++  AccountManagementFriendsRouteRoute,
+   AccountManagementRedeemCodesRouteRoute,
+   AccountManagementVbucksInformationRouteRoute,
+   AccountsRemoveRouteRoute,
+diff --git a/src/routes/account-management/friends/-hooks.ts b/src/routes/account-management/friends/-hooks.ts
+new file mode 100644
+index 0000000..6df94e8
+--- /dev/null
++++ b/src/routes/account-management/friends/-hooks.ts
+@@ -0,0 +1,298 @@
++import type {
++  FriendsActionType,
++  FriendsEntry,
++  FriendsListType,
++  FriendsSummary,
++} from '../../../types/friends-list'
++
++import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
++import { useDebounce } from '@uidotdev/usehooks'
++import { useTranslation } from 'react-i18next'
++
++import {
++  friendsBulkDelay,
++  friendsSearchDelay,
++} from '../../../config/constants/friends'
++
++import { useGetSelectedAccount } from '../../../hooks/accounts'
++
++import { applyFriendsAction, filterFriends } from '../../../lib/parsers/friends'
++import { toast } from '../../../lib/notifications'
++
++export type FriendsBulkType = Extract<
++  FriendsActionType,
++  'remove' | 'accept' | 'reject' | 'cancel'
++>
++
++export type FriendsBulkState = {
++  type: FriendsBulkType
++  current: number
++  total: number
++  failed: number
++  stopping: boolean
++}
++
++/**
++ * List each bulk action runs on.
++ */
++export const friendsBulkListType: Record<FriendsBulkType, FriendsListType> = {
++  remove: 'friends',
++  accept: 'incoming',
++  reject: 'incoming',
++  cancel: 'outgoing',
++}
++
++function wait(time: number) {
++  return new Promise((resolve) => setTimeout(resolve, time))
++}
++
++export function useFriendsData() {
++  const { t } = useTranslation(['account-management'])
++  const { selected } = useGetSelectedAccount()
++
++  const [summary, setSummary] = useState<FriendsSummary | null>(null)
++  const [isLoading, setIsLoading] = useState(false)
++  const [tab, setTabState] = useState<FriendsListType>('friends')
++  const [searchValue, setSearchValue] = useState('')
++  const [addValue, setAddValue] = useState('')
++  const [isAdding, setIsAdding] = useState(false)
++  const [busyAccountId, setBusyAccountId] = useState<string | null>(null)
++  const [bulk, setBulk] = useState<FriendsBulkState | null>(null)
++
++  const loadRequest = useRef(0)
++  // Changes with the account: late responses of the previous one are dropped
++  const generation = useRef(0)
++  const stopBulkRequested = useRef(false)
++
++  const debouncedSearchValue = useDebounce(searchValue, friendsSearchDelay)
++
++  const playerName = (entry: Pick<FriendsEntry, 'displayName'>) =>
++    entry.displayName ?? t('friends.player')
++
++  const loadSummary = async () => {
++    if (!selected) {
++      return
++    }
++
++    const current = ++loadRequest.current
++
++    setIsLoading(true)
++
++    const result = await window.electronAPI.getFriendsSummary(selected)
++
++    if (current !== loadRequest.current) {
++      return
++    }
++
++    setSummary(result)
++    setIsLoading(false)
++  }
++
++  useEffect(() => {
++    generation.current += 1
++    loadRequest.current += 1
++    stopBulkRequested.current = true
++
++    setSummary(null)
++    setSearchValue('')
++    setBusyAccountId(null)
++    setBulk(null)
++    setIsAdding(false)
++    setIsLoading(false)
++
++    loadSummary()
++  }, [selected?.accountId])
++
++  const setTab = (value: FriendsListType) => {
++    setTabState(value)
++    setSearchValue('')
++  }
++
++  const runAction = async (type: FriendsActionType, entry: FriendsEntry) => {
++    if (!selected || busyAccountId !== null || bulk !== null) {
++      return
++    }
++
++    const currentGeneration = generation.current
++
++    setBusyAccountId(entry.accountId)
++
++    const response = await window.electronAPI.friendsAction(
++      selected,
++      type,
++      entry.accountId,
++    )
++
++    if (currentGeneration !== generation.current) {
++      return
++    }
++
++    setBusyAccountId(null)
++
++    if (!response.success) {
++      toast(t('friends.results.error', { error: response.error }))
++
++      return
++    }
++
++    if (type !== 'add') {
++      setSummary((current) =>
++        current
++          ? { ...current, ...applyFriendsAction(current, type, entry.accountId) }
++          : current,
++      )
++    }
++
++    toast(t(`friends.results.${type}`, { name: playerName(entry) }))
++  }
++
++  const addFriend = async () => {
++    const value = addValue.trim()
++
++    if (!selected || value === '' || isAdding || bulk !== null) {
++      return
++    }
++
++    const currentGeneration = generation.current
++
++    setIsAdding(true)
++
++    const response = await window.electronAPI.friendsAction(
++      selected,
++      'add',
++      value,
++    )
++
++    if (currentGeneration !== generation.current) {
++      return
++    }
++
++    setIsAdding(false)
++
++    if (!response.success) {
++      toast(t('friends.results.error', { error: response.error }))
++
++      return
++    }
++
++    setAddValue('')
++    toast(
++      t('friends.add.success', {
++        name: response.displayName ?? value,
++      }),
++    )
++    loadSummary()
++  }
++
++  /**
++   * One request per player, a second apart, on a snapshot of the list.
++   */
++  const runBulk = async (type: FriendsBulkType) => {
++    if (!selected || !summary || busyAccountId !== null || bulk !== null) {
++      return
++    }
++
++    const entries = summary[friendsBulkListType[type]]
++    const currentGeneration = generation.current
++    const isCurrent = () =>
++      currentGeneration === generation.current && !stopBulkRequested.current
++    let done = 0
++    let failed = 0
++
++    if (entries.length === 0) {
++      return
++    }
++
++    stopBulkRequested.current = false
++    setBulk({
++      type,
++      current: 0,
++      total: entries.length,
++      failed: 0,
++      stopping: false,
++    })
++
++    for (const [index, entry] of entries.entries()) {
++      if (index > 0) {
++        await wait(friendsBulkDelay)
++      }
++
++      if (!isCurrent()) {
++        break
++      }
++
++      const response = await window.electronAPI.friendsAction(
++        selected,
++        type,
++        entry.accountId,
++      )
++
++      if (currentGeneration !== generation.current) {
++        return
++      }
++
++      if (response.success) {
++        done += 1
++      } else {
++        failed += 1
++      }
++
++      setBulk((current) =>
++        current ? { ...current, current: index + 1, failed } : current,
++      )
++    }
++
++    if (currentGeneration !== generation.current) {
++      return
++    }
++
++    setBulk(null)
++    toast(
++      t(failed > 0 ? 'friends.bulk.done-with-errors' : 'friends.bulk.done', {
++        done,
++        failed,
++        total: entries.length,
++      }),
++    )
++    loadSummary()
++  }
++
++  const stopBulk = () => {
++    stopBulkRequested.current = true
++    setBulk((current) => (current ? { ...current, stopping: true } : current))
++  }
++
++  const tabEntries = summary?.[tab] ?? []
++  const filteredEntries = useMemo(
++    () => filterFriends(tabEntries, debouncedSearchValue),
++    [tabEntries, debouncedSearchValue],
++  )
++  const deferredEntries = useDeferredValue(filteredEntries)
++
++  return {
++    addValue,
++    bulk,
++    busyAccountId,
++    filteredEntries: deferredEntries,
++    isAdding,
++    isFiltering:
++      deferredEntries !== filteredEntries ||
++      searchValue !== debouncedSearchValue,
++    isLoading,
++    searchValue,
++    selected,
++    summary,
++    tab,
++    tabEntries,
++
++    addFriend,
++    loadSummary,
++    playerName,
++    runAction,
++    runBulk,
++    setAddValue,
++    setSearchValue,
++    setTab,
++    stopBulk,
++  }
++}
+diff --git a/src/routes/account-management/friends/route.tsx b/src/routes/account-management/friends/route.tsx
+new file mode 100644
+index 0000000..d2d50e0
+--- /dev/null
++++ b/src/routes/account-management/friends/route.tsx
+@@ -0,0 +1,538 @@
++import type {
++  FriendsActionType,
++  FriendsEntry,
++  FriendsListType,
++} from '../../../types/friends-list'
++import type { FriendsBulkType } from './-hooks'
++
++import {
++  memo,
++  useCallback,
++  useEffect,
++  useLayoutEffect,
++  useRef,
++  useState,
++} from 'react'
++
++import { createRoute } from '@tanstack/react-router'
++import { useVirtualizer } from '@tanstack/react-virtual'
++import { UpdateIcon } from '@radix-ui/react-icons'
++import { Copy, Search, UserPlus, X } from 'lucide-react'
++import { useTranslation } from 'react-i18next'
++
++import { friendsListTypes } from '../../../config/constants/friends'
++
++import { Route as RootRoute } from '../../__root'
++
++import { HomeBreadcrumb } from '../../../components/navigations/breadcrumb/home'
++import {
++  Breadcrumb,
++  BreadcrumbItem,
++  BreadcrumbList,
++  BreadcrumbPage,
++  BreadcrumbSeparator,
++} from '../../../components/ui/breadcrumb'
++import { Button } from '../../../components/ui/button'
++import { useConfirmDialog } from '../../../components/ui/extended/confirm-dialog'
++import { Input } from '../../../components/ui/input'
++import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs'
++
++import { friendsBulkListType, useFriendsData } from './-hooks'
++
++import { toast } from '../../../lib/notifications'
++import { cn, parseCustomDisplayName } from '../../../lib/utils'
++
++export const Route = createRoute({
++  getParentRoute: () => RootRoute,
++  path: '/account-management/friends',
++  component: () => {
++    const { t } = useTranslation(['sidebar'])
++
++    return (
++      <>
++        <Breadcrumb>
++          <BreadcrumbList>
++            <HomeBreadcrumb />
++            <BreadcrumbSeparator />
++            <BreadcrumbItem>
++              <BreadcrumbPage>{t('account-management.title')}</BreadcrumbPage>
++            </BreadcrumbItem>
++            <BreadcrumbSeparator />
++            <BreadcrumbItem>
++              <BreadcrumbPage>
++                {t('account-management.options.friends')}
++              </BreadcrumbPage>
++            </BreadcrumbItem>
++          </BreadcrumbList>
++        </Breadcrumb>
++
++        <Content />
++      </>
++    )
++  },
++})
++
++/**
++ * Actions of each row, in order.
++ */
++const rowActions: Record<FriendsListType, Array<FriendsActionType>> = {
++  friends: ['remove', 'block'],
++  incoming: ['accept', 'reject'],
++  outgoing: ['cancel'],
++  blocked: ['unblock'],
++}
++
++const confirmedActions: Array<FriendsActionType> = [
++  'reject',
++  'cancel',
++  'remove',
++  'block',
++]
++
++const bulkActions: Record<FriendsListType, Array<FriendsBulkType>> = {
++  friends: ['remove'],
++  incoming: ['accept', 'reject'],
++  outgoing: ['cancel'],
++  blocked: [],
++}
++
++function Content() {
++  const { t } = useTranslation(['account-management'])
++  const { confirm, dialog } = useConfirmDialog()
++
++  const {
++    addValue,
++    bulk,
++    busyAccountId,
++    filteredEntries,
++    isAdding,
++    isFiltering,
++    isLoading,
++    searchValue,
++    selected,
++    summary,
++    tab,
++    tabEntries,
++
++    addFriend,
++    loadSummary,
++    playerName,
++    runAction,
++    runBulk,
++    setAddValue,
++    setSearchValue,
++    setTab,
++    stopBulk,
++  } = useFriendsData()
++
++  const accountName = parseCustomDisplayName(selected)
++
++  const handleAction = (type: FriendsActionType, entry: FriendsEntry) => {
++    if (!confirmedActions.includes(type)) {
++      runAction(type, entry)
++
++      return
++    }
++
++    confirm({
++      title: t(`friends.confirm.${type}.title`),
++      description: t(`friends.confirm.${type}.description`, {
++        name: playerName(entry),
++        account: accountName,
++      }),
++      confirmLabel: t(`friends.actions.${type}`),
++      cancelLabel: t('friends.confirm.keep'),
++      destructive: true,
++      onConfirm: () => runAction(type, entry),
++    })
++  }
++
++  // Rows keep the same callback, so they are not drawn again on each render
++  const actionRef = useRef(handleAction)
++  actionRef.current = handleAction
++  const onAction = useCallback(
++    (type: FriendsActionType, entry: FriendsEntry) =>
++      actionRef.current(type, entry),
++    [],
++  )
++
++  const handleBulk = (type: FriendsBulkType) => {
++    const count = summary?.[friendsBulkListType[type]].length ?? 0
++
++    confirm({
++      title: t(`friends.bulk.confirm.${type}.title`),
++      description: (
++        <>
++          <p>
++            {t(`friends.bulk.confirm.${type}.description`, {
++              count,
++              account: accountName,
++            })}
++          </p>
++          <p>{t('friends.bulk.confirm.note')}</p>
++        </>
++      ),
++      confirmLabel: t(`friends.bulk.${type}`),
++      cancelLabel: t('friends.confirm.keep'),
++      destructive: type !== 'accept',
++      onConfirm: () => runBulk(type),
++    })
++  }
++
++  if (!selected) {
++    return (
++      <div className="flex flex-grow items-center justify-center text-muted-foreground">
++        {t('friends.no-account')}
++      </div>
++    )
++  }
++
++  const isBusy = bulk !== null
++  const hasSearch = searchValue.trim() !== ''
++
++  return (
++    <div className="flex flex-col flex-grow gap-4">
++      <div className="flex items-center justify-between gap-4">
++        <p className="text-sm text-muted-foreground">
++          {t('friends.subtitle')}
++        </p>
++        <Button
++          size="icon"
++          variant="outline"
++          onClick={() => loadSummary()}
++          disabled={isLoading || isBusy}
++          title={t('friends.reload')}
++        >
++          <UpdateIcon className={cn({ 'animate-spin': isLoading })} />
++        </Button>
++      </div>
++
++      <form
++        className="flex gap-3"
++        onSubmit={(event) => {
++          event.preventDefault()
++          addFriend()
++        }}
++      >
++        <Input
++          className="flex-grow"
++          placeholder={t('friends.add.placeholder')}
++          value={addValue}
++          onChange={(event) => setAddValue(event.target.value)}
++          disabled={isAdding || isBusy}
++          spellCheck={false}
++        />
++        <Button
++          type="submit"
++          className="relative"
++          disabled={addValue.trim() === '' || isAdding || isBusy}
++        >
++          <span className={cn('absolute', { hidden: !isAdding })}>
++            <UpdateIcon className="animate-spin" />
++          </span>
++          <span className={cn('flex items-center', { invisible: isAdding })}>
++            <UserPlus className="size-4 mr-2" />
++            {t('friends.add.submit')}
++          </span>
++        </Button>
++      </form>
++
++      <Tabs
++        value={tab}
++        onValueChange={(value) => setTab(value as FriendsListType)}
++      >
++        <TabsList className="flex-wrap h-auto">
++          {friendsListTypes.map((type) => (
++            <TabsTrigger
++              key={type}
++              value={type}
++              disabled={isBusy}
++            >
++              {t(`friends.tabs.${type}`)}
++              <span className="ml-1.5 tabular-nums text-muted-foreground">
++                {summary?.[type].length ?? 0}
++              </span>
++            </TabsTrigger>
++          ))}
++        </TabsList>
++      </Tabs>
++
++      <div className="flex flex-wrap items-center gap-3">
++        <div className="relative flex-grow min-w-48">
++          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
++          <Input
++            className="pl-8 pr-9"
++            placeholder={t('friends.search.placeholder')}
++            value={searchValue}
++            onChange={(event) => setSearchValue(event.target.value)}
++            spellCheck={false}
++          />
++          {searchValue !== '' && (
++            <Button
++              className="absolute right-0.5 top-0.5 size-9"
++              size="icon"
++              variant="ghost"
++              onClick={() => setSearchValue('')}
++              title={t('friends.search.clear')}
++            >
++              <X className="size-4" />
++            </Button>
++          )}
++        </div>
++        <span className="text-sm tabular-nums text-muted-foreground">
++          {t('friends.search.shown', {
++            shown: filteredEntries.length,
++            total: tabEntries.length,
++          })}
++        </span>
++        {bulkActions[tab].map((type) => (
++          <Button
++            key={type}
++            size="sm"
++            variant={type === 'accept' ? 'secondary' : 'outline'}
++            onClick={() => handleBulk(type)}
++            disabled={
++              isBusy || busyAccountId !== null || tabEntries.length === 0
++            }
++          >
++            {t(`friends.bulk.${type}`)}
++          </Button>
++        ))}
++      </div>
++
++      {bulk && (
++        <div
++          className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm"
++          role="status"
++        >
++          <UpdateIcon className="animate-spin shrink-0" />
++          <span className="shrink-0">{t(`friends.bulk.${bulk.type}`)}</span>
++          <div className="h-2 flex-grow overflow-hidden rounded-full bg-muted">
++            <div
++              className="h-full bg-primary transition-[width]"
++              style={{
++                width: `${(bulk.current / Math.max(bulk.total, 1)) * 100}%`,
++              }}
++            />
++          </div>
++          <span className="shrink-0 tabular-nums">
++            {bulk.stopping
++              ? t('friends.bulk.stopping')
++              : t('friends.bulk.progress', {
++                  current: bulk.current,
++                  total: bulk.total,
++                })}
++          </span>
++          <Button
++            size="sm"
++            variant="outline"
++            onClick={stopBulk}
++            disabled={bulk.stopping}
++          >
++            {t('friends.bulk.stop')}
++          </Button>
++        </div>
++      )}
++
++      {summary && !summary.success ? (
++        <div className="flex items-center gap-3 border-l-4 border-red-400 ml-2 pl-2 text-red-400">
++          <span>
++            {t('friends.load-failed')}: {summary.error}
++          </span>
++          <Button
++            size="sm"
++            variant="outline"
++            onClick={() => loadSummary()}
++            disabled={isLoading}
++          >
++            {t('friends.retry')}
++          </Button>
++        </div>
++      ) : isLoading && !summary ? (
++        <div className="flex flex-grow items-center justify-center">
++          <UpdateIcon className="animate-spin size-6" />
++        </div>
++      ) : filteredEntries.length === 0 ? (
++        <div className="flex flex-col flex-grow items-center justify-center text-muted-foreground">
++          <p>
++            {hasSearch && tabEntries.length > 0
++              ? t('friends.empty.no-matches')
++              : t(`friends.empty.${tab}`)}
++          </p>
++        </div>
++      ) : (
++        <FriendsList
++          entries={filteredEntries}
++          isStale={isLoading || isFiltering}
++          actions={rowActions[tab]}
++          busyAccountId={busyAccountId}
++          disabled={isBusy || busyAccountId !== null}
++          onAction={onAction}
++        />
++      )}
++
++      {dialog}
++    </div>
++  )
++}
++
++// Fixed row height, so every row of the virtual list has the same size
++const rowHeight = 56
++
++/**
++ * Only the visible rows are rendered: accounts can have thousands of
++ * friends. The page scrolls in the main layout viewport.
++ */
++function FriendsList({
++  actions,
++  busyAccountId,
++  disabled,
++  entries,
++  isStale,
++  onAction,
++}: {
++  actions: Array<FriendsActionType>
++  busyAccountId: string | null
++  disabled: boolean
++  entries: Array<FriendsEntry>
++  isStale: boolean
++  onAction: (type: FriendsActionType, entry: FriendsEntry) => void
++}) {
++  const containerRef = useRef<HTMLDivElement>(null)
++  const [scrollMargin, setScrollMargin] = useState(0)
++  const [scrollElement] = useState(() =>
++    document.querySelector<HTMLElement>('.main-wrapper-content'),
++  )
++
++  const virtualizer = useVirtualizer({
++    count: entries.length,
++    getScrollElement: () => scrollElement,
++    estimateSize: () => rowHeight,
++    overscan: 8,
++    scrollMargin,
++  })
++
++  // The controls above the list change height as they wrap
++  useLayoutEffect(() => {
++    const offsetTop = containerRef.current?.offsetTop ?? 0
++
++    if (offsetTop !== scrollMargin) {
++      setScrollMargin(offsetTop)
++    }
++  })
++
++  // A new search or tab starts at the top of the list
++  useEffect(() => {
++    if (scrollElement && scrollElement.scrollTop > scrollMargin) {
++      scrollElement.scrollTop = scrollMargin
++    }
++  }, [entries])
++
++  return (
++    <div
++      ref={containerRef}
++      className={cn('relative w-full rounded-md border transition-opacity', {
++        'opacity-60': isStale,
++      })}
++      style={{ height: virtualizer.getTotalSize() }}
++    >
++      {virtualizer.getVirtualItems().map((row) => {
++        const entry = entries[row.index]
++
++        return (
++          <FriendRow
++            key={entry.accountId}
++            entry={entry}
++            actions={actions}
++            isBusy={busyAccountId === entry.accountId}
++            disabled={disabled}
++            isLast={row.index === entries.length - 1}
++            offset={row.start - scrollMargin}
++            onAction={onAction}
++          />
++        )
++      })}
++    </div>
++  )
++}
++
++const FriendRow = memo(function FriendRow({
++  actions,
++  disabled,
++  entry,
++  isBusy,
++  isLast,
++  offset,
++  onAction,
++}: {
++  actions: Array<FriendsActionType>
++  disabled: boolean
++  entry: FriendsEntry
++  isBusy: boolean
++  isLast: boolean
++  offset: number
++  onAction: (type: FriendsActionType, entry: FriendsEntry) => void
++}) {
++  const { t } = useTranslation(['account-management'])
++
++  const copyId = () => {
++    navigator.clipboard
++      .writeText(entry.accountId)
++      .then(() => toast(t('friends.copied')))
++      .catch(() => {})
++  }
++
++  return (
++    <div
++      className={cn(
++        'absolute left-0 top-0 flex w-full items-center gap-3 px-3',
++        { 'border-b': !isLast },
++      )}
++      style={{ height: rowHeight, transform: `translateY(${offset}px)` }}
++    >
++      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium uppercase text-muted-foreground">
++        {entry.displayName?.at(0) ?? '?'}
++      </div>
++      <div className="flex min-w-0 flex-grow flex-col">
++        <span
++          className={cn('truncate text-sm', {
++            'italic text-muted-foreground': entry.displayName === null,
++          })}
++        >
++          {entry.displayName ?? t('friends.player')}
++        </span>
++        <span className="flex items-center gap-1 text-xs text-muted-foreground">
++          <span className="truncate font-mono select-text">
++            {entry.accountId}
++          </span>
++          <button
++            type="button"
++            className="shrink-0 rounded p-0.5 hover:text-foreground"
++            onClick={copyId}
++            title={t('friends.copy-id')}
++            aria-label={t('friends.copy-id')}
++          >
++            <Copy className="size-3" />
++          </button>
++        </span>
++      </div>
++      <div className="flex shrink-0 items-center gap-2">
++        {isBusy && <UpdateIcon className="animate-spin" />}
++        {actions.map((type) => (
++          <Button
++            key={type}
++            size="sm"
++            className="h-8"
++            variant={
++              type === 'accept' || type === 'unblock' ? 'secondary' : 'outline'
++            }
++            onClick={() => onAction(type, entry)}
++            disabled={disabled}
++          >
++            {t(`friends.actions.${type}`)}
++          </Button>
++        ))}
++      </div>
++    </div>
++  )
++})
+diff --git a/src/routes/settings/-customizable-menu/-index.tsx b/src/routes/settings/-customizable-menu/-index.tsx
+index 371b954..a12b859 100644
+--- a/src/routes/settings/-customizable-menu/-index.tsx
++++ b/src/routes/settings/-customizable-menu/-index.tsx
+@@ -289,6 +289,19 @@ function AccountManagementSection() {
+             onCheckedChange={updateMenuOption('vbucksInformation')}
+           />
+         </div>
++        <div className="item">
++          <Label
++            className="title"
++            htmlFor="friends"
++          >
++            {t('account-management.options.friends')}
++          </Label>
++          <Switch
++            id="friends"
++            checked={getMenuOptionVisibility('friends')}
++            onCheckedChange={updateMenuOption('friends')}
++          />
++        </div>
+         <div className="item">
+           <Label
+             className="title"
+diff --git a/src/routes/stw-operations/party/-party-status.tsx b/src/routes/stw-operations/party/-party-status.tsx
+new file mode 100644
+index 0000000..e62c95b
+--- /dev/null
++++ b/src/routes/stw-operations/party/-party-status.tsx
+@@ -0,0 +1,498 @@
++import type {
++  PartyActionResponse,
++  PartyInfo,
++  PartyMemberInfo,
++} from '../../../types/party-info'
++
++import { useEffect, useRef, useState } from 'react'
++import { UpdateIcon } from '@radix-ui/react-icons'
++import { Crown } from 'lucide-react'
++import { useTranslation } from 'react-i18next'
++
++import { stwFeatureAvailability } from '../../../config/constants/feature-availability'
++import { partyRetrySeconds } from '../../../config/constants/friends'
++
++import { Button } from '../../../components/ui/button'
++import {
++  Card,
++  CardContent,
++  CardDescription,
++  CardHeader,
++  CardTitle,
++} from '../../../components/ui/card'
++import { useConfirmDialog } from '../../../components/ui/extended/confirm-dialog'
++import { Label } from '../../../components/ui/label'
++import {
++  Select,
++  SelectContent,
++  SelectItem,
++  SelectTrigger,
++  SelectValue,
++} from '../../../components/ui/select'
++import { Switch } from '../../../components/ui/switch'
++
++import { useGetSelectedAccount } from '../../../hooks/accounts'
++
++import { toast } from '../../../lib/notifications'
++import { cn, parseCustomDisplayName } from '../../../lib/utils'
++
++type PartyStatusAction = 'promote' | 'kick' | 'privacy' | 'fix-invite'
++
++function usePartyStatus() {
++  const { t } = useTranslation(['stw-operations'])
++  const { selected } = useGetSelectedAccount()
++
++  const [info, setInfo] = useState<PartyInfo | null>(null)
++  const [isLoading, setIsLoading] = useState(false)
++  const [countdown, setCountdown] = useState<number | null>(null)
++  const [pendingAction, setPendingAction] =
++    useState<PartyStatusAction | null>(null)
++  const [memberId, setMemberId] = useState('')
++  const requestId = useRef(0)
++  // Changes with the account: late action results of the previous one are
++  // dropped
++  const generation = useRef(0)
++
++  const loadInfo = async () => {
++    if (!selected) {
++      return
++    }
++
++    const current = ++requestId.current
++
++    setIsLoading(true)
++
++    const result = await window.electronAPI.getPartyInfo(selected)
++
++    if (current !== requestId.current) {
++      return
++    }
++
++    setInfo(result)
++    setIsLoading(false)
++  }
++
++  useEffect(() => {
++    requestId.current += 1
++    generation.current += 1
++
++    setInfo(null)
++    setIsLoading(false)
++    setPendingAction(null)
++    setMemberId('')
++
++    loadInfo()
++  }, [selected?.accountId])
++
++  // Without a party, look again every few seconds until there is one
++  useEffect(() => {
++    if (!selected || isLoading || !info || (info.success && info.party)) {
++      setCountdown(null)
++
++      return
++    }
++
++    let remaining = partyRetrySeconds
++
++    setCountdown(remaining)
++
++    const timer = setInterval(() => {
++      remaining -= 1
++
++      if (remaining > 0) {
++        setCountdown(remaining)
++
++        return
++      }
++
++      clearInterval(timer)
++      setCountdown(null)
++      loadInfo()
++    }, 1_000)
++
++    return () => clearInterval(timer)
++  }, [info, isLoading, selected?.accountId])
++
++  const otherMembers =
++    info?.party?.members.filter(
++      (member) => member.accountId !== selected?.accountId,
++    ) ?? []
++  const selectedMember =
++    otherMembers.find((member) => member.accountId === memberId) ?? null
++
++  const memberName = (member: Pick<PartyMemberInfo, 'displayName'>) =>
++    member.displayName ?? t('party.status.player')
++
++  const run = async (
++    action: PartyStatusAction,
++    request: () => Promise<PartyActionResponse>,
++    successMessage: string,
++  ) => {
++    if (!selected || pendingAction !== null) {
++      return
++    }
++
++    const current = generation.current
++
++    setPendingAction(action)
++
++    const response = await request()
++
++    if (current !== generation.current) {
++      return
++    }
++
++    setPendingAction(null)
++    toast(
++      response.success
++        ? successMessage
++        : t('party.status.results.error', { error: response.error }),
++    )
++    loadInfo()
++  }
++
++  const memberAction = (type: 'kick' | 'promote') => {
++    if (!selected || !selectedMember) {
++      return
++    }
++
++    run(
++      type,
++      () =>
++        window.electronAPI.partyMemberAction(
++          selected,
++          type,
++          selectedMember.accountId,
++        ),
++      t(`party.status.results.${type}`, { name: memberName(selectedMember) }),
++    )
++
++    if (type === 'kick') {
++      setMemberId('')
++    }
++  }
++
++  const setPrivacy = (makePrivate: boolean) => {
++    if (!selected) {
++      return
++    }
++
++    run(
++      'privacy',
++      () => window.electronAPI.partySetPrivacy(selected, makePrivate),
++      t(`party.status.results.${makePrivate ? 'private' : 'public'}`),
++    )
++  }
++
++  const fixInvite = () => {
++    if (!selected) {
++      return
++    }
++
++    run(
++      'fix-invite',
++      () => window.electronAPI.partyFixInvite(selected),
++      t('party.status.results.fix-invite'),
++    )
++  }
++
++  return {
++    countdown,
++    info,
++    isLoading,
++    memberId,
++    otherMembers,
++    pendingAction,
++    selected,
++    selectedMember,
++
++    fixInvite,
++    loadInfo,
++    memberAction,
++    memberName,
++    setMemberId,
++    setPrivacy,
++  }
++}
++
++/**
++ * Party of the account selected in the header, with the leader actions.
++ */
++export function PartyStatusCard() {
++  const { t } = useTranslation(['stw-operations', 'general'])
++  const { confirm, dialog } = useConfirmDialog()
++
++  const {
++    countdown,
++    info,
++    isLoading,
++    memberId,
++    otherMembers,
++    pendingAction,
++    selected,
++    selectedMember,
++
++    fixInvite,
++    loadInfo,
++    memberAction,
++    memberName,
++    setMemberId,
++    setPrivacy,
++  } = usePartyStatus()
++
++  const party = info?.success ? info.party : null
++  const isLeader = info?.isLeader === true
++  const actionsDisabled = !party || !isLeader || pendingAction !== null
++  const accountName = parseCustomDisplayName(selected)
++
++  const confirmMemberAction = (type: 'kick' | 'promote') => {
++    if (!selectedMember) {
++      return
++    }
++
++    confirm({
++      title: t(`party.status.confirm.${type}.title`),
++      description: t(`party.status.confirm.${type}.description`, {
++        name: memberName(selectedMember),
++        account: accountName,
++      }),
++      confirmLabel: t(`party.status.actions.${type}`),
++      cancelLabel: t('party.status.confirm.keep'),
++      destructive: true,
++      onConfirm: () => memberAction(type),
++    })
++  }
++
++  const statusText = () => {
++    if (!info) {
++      return t('party.status.loading')
++    }
++
++    if (!info.success) {
++      return info.errorCode?.endsWith('party_not_found')
++        ? t('party.status.not-found')
++        : t('party.status.error', { error: info.error })
++    }
++
++    return t('party.status.no-party')
++  }
++
++  return (
++    <Card className="max-w-lg w-full">
++      <CardHeader className="flex-row items-start justify-between gap-4 space-y-0 pb-4">
++        <div className="space-y-1.5">
++          <CardTitle className="text-lg">{t('party.status.title')}</CardTitle>
++          <CardDescription>
++            {selected
++              ? t('party.status.description')
++              : t('party.status.no-account')}
++          </CardDescription>
++        </div>
++        <Button
++          size="icon"
++          variant="outline"
++          className="shrink-0"
++          onClick={() => loadInfo()}
++          disabled={!selected || isLoading}
++          title={t('party.status.refresh')}
++        >
++          <UpdateIcon className={cn({ 'animate-spin': isLoading })} />
++        </Button>
++      </CardHeader>
++
++      {selected && (
++        <CardContent className="grid gap-4">
++          {party ? (
++            <div className="grid gap-2">
++              <p className="text-sm">
++                {t('party.status.summary', {
++                  count: party.size,
++                  max: party.maxSize,
++                })}{' '}
++                ·{' '}
++                {party.isPrivate
++                  ? t('party.status.private')
++                  : t('party.status.public')}
++              </p>
++              <div className="flex flex-wrap gap-2">
++                {party.members.map((member) => (
++                  <span
++                    key={member.accountId}
++                    className={cn(
++                      'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs',
++                      {
++                        'border-yellow-500/60': member.isLeader,
++                        italic: member.displayName === null,
++                      },
++                    )}
++                    title={member.accountId}
++                  >
++                    {member.isLeader && (
++                      <Crown
++                        className="size-3 text-yellow-500"
++                        aria-label={t('party.status.leader')}
++                      />
++                    )}
++                    {memberName(member)}
++                    {member.accountId === selected.accountId && (
++                      <span className="text-muted-foreground">
++                        ({t('party.status.you')})
++                      </span>
++                    )}
++                  </span>
++                ))}
++              </div>
++            </div>
++          ) : (
++            <p
++              className={cn('text-sm text-muted-foreground', {
++                'text-red-400': info && !info.success,
++              })}
++              role="status"
++            >
++              {statusText()}
++              {countdown !== null && (
++                <span className="block text-xs text-muted-foreground tabular-nums">
++                  {t('party.status.retry-in', { seconds: countdown })}
++                </span>
++              )}
++            </p>
++          )}
++
++          {party && !isLeader && (
++            <p className="text-xs text-muted-foreground">
++              {t('party.status.leader-only')}
++            </p>
++          )}
++
++          {party && (
++            <>
++              <div className="grid gap-2">
++                <Label htmlFor="party-status-member">
++                  {t('party.status.member.label')}
++                </Label>
++                <div className="flex flex-wrap gap-2">
++                  <Select
++                    value={memberId}
++                    onValueChange={setMemberId}
++                    disabled={actionsDisabled || otherMembers.length === 0}
++                  >
++                    <SelectTrigger
++                      id="party-status-member"
++                      className="flex-grow w-auto min-w-40"
++                    >
++                      <SelectValue
++                        placeholder={
++                          otherMembers.length === 0
++                            ? t('party.status.member.empty')
++                            : t('party.status.member.placeholder')
++                        }
++                      />
++                    </SelectTrigger>
++                    <SelectContent>
++                      {otherMembers.map((member) => (
++                        <SelectItem
++                          key={member.accountId}
++                          value={member.accountId}
++                        >
++                          {memberName(member)}
++                        </SelectItem>
++                      ))}
++                    </SelectContent>
++                  </Select>
++                  <ActionButton
++                    isPending={pendingAction === 'promote'}
++                    disabled={actionsDisabled || !selectedMember}
++                    onClick={() => confirmMemberAction('promote')}
++                  >
++                    {t('party.status.actions.promote')}
++                  </ActionButton>
++                  <ActionButton
++                    isPending={pendingAction === 'kick'}
++                    disabled={
++                      !stwFeatureAvailability.partyKick ||
++                      actionsDisabled ||
++                      !selectedMember
++                    }
++                    variant="destructive"
++                    onClick={() => confirmMemberAction('kick')}
++                  >
++                    {t('party.status.actions.kick')}
++                  </ActionButton>
++                </div>
++                {!stwFeatureAvailability.partyKick && (
++                  <p className="text-xs text-muted-foreground">
++                    {t('party.status.actions.kick')}:{' '}
++                    {t('general:feature-unavailable')}
++                  </p>
++                )}
++              </div>
++
++              <div className="flex items-center justify-between gap-4">
++                <Label htmlFor="party-status-privacy">
++                  {t('party.status.actions.privacy')}
++                </Label>
++                <div className="flex items-center gap-2">
++                  {pendingAction === 'privacy' && (
++                    <UpdateIcon className="animate-spin" />
++                  )}
++                  <Switch
++                    id="party-status-privacy"
++                    checked={party.isPrivate}
++                    onCheckedChange={setPrivacy}
++                    disabled={actionsDisabled}
++                  />
++                </div>
++              </div>
++
++              <div className="flex items-center justify-between gap-4">
++                <p className="text-xs text-muted-foreground">
++                  {t('party.status.fix-invite-description')}
++                </p>
++                <ActionButton
++                  isPending={pendingAction === 'fix-invite'}
++                  disabled={actionsDisabled}
++                  variant="outline"
++                  onClick={fixInvite}
++                >
++                  {t('party.status.actions.fix-invite')}
++                </ActionButton>
++              </div>
++            </>
++          )}
++        </CardContent>
++      )}
++
++      {dialog}
++    </Card>
++  )
++}
++
++function ActionButton({
++  children,
++  disabled,
++  isPending,
++  onClick,
++  variant,
++}: {
++  children: string
++  disabled: boolean
++  isPending: boolean
++  onClick: () => void
++  variant?: 'destructive' | 'outline'
++}) {
++  return (
++    <Button
++      className="relative shrink-0"
++      size="sm"
++      variant={variant}
++      onClick={onClick}
++      disabled={disabled}
++    >
++      <span className={cn('absolute', { hidden: !isPending })}>
++        <UpdateIcon className="animate-spin" />
++      </span>
++      <span className={cn({ invisible: isPending })}>{children}</span>
++    </Button>
++  )
++}
+diff --git a/src/routes/stw-operations/party/route.tsx b/src/routes/stw-operations/party/route.tsx
+index 113e081..32bf83c 100644
+--- a/src/routes/stw-operations/party/route.tsx
++++ b/src/routes/stw-operations/party/route.tsx
+@@ -23,6 +23,7 @@ import { KickAllPartyCard } from './-kick-all-party'
+ import { ClaimRewardsCard } from './-claim-rewards'
+ import { InviteCard } from './-invite'
+ import { LeavePartyCard } from './-leave-party'
++import { PartyStatusCard } from './-party-status'
+ 
+ import { useClaimedRewardsNotifications } from './-hooks'
+ 
+@@ -58,6 +59,7 @@ export function RouteComponent() {
+       <div className="flex flex-grow">
+         <div className="flex items-center justify-center w-full">
+           <div className="flex flex-col items-center space-y-5 w-full">
++            <PartyStatusCard />
+             <KickAllPartyCard />
+             <div className="flex gap-5 items-center justify-center">
+               <ClaimRewardsCard />
+diff --git a/src/services/endpoints/friends.ts b/src/services/endpoints/friends.ts
+index 5bb0f3f..16102e1 100644
+--- a/src/services/endpoints/friends.ts
++++ b/src/services/endpoints/friends.ts
+@@ -1,4 +1,7 @@
+-import type { FetchFriendResponse } from '../../types/services/friends'
++import type {
++  FetchFriendResponse,
++  FriendsSummaryResponse,
++} from '../../types/services/friends'
+ 
+ import { friendsService } from '../config/friends'
+ 
+@@ -56,3 +59,59 @@ export function removeFriend({
+     },
+   })
+ }
++
++export function getFriendsSummary({
++  accessToken,
++  accountId,
++}: {
++  accessToken: string
++  accountId: string
++}) {
++  return friendsService.get<FriendsSummaryResponse>(`/${accountId}/summary`, {
++    headers: {
++      Authorization: `bearer ${accessToken}`,
++    },
++  })
++}
++
++/**
++ * The block list lives in the public API, outside the v1 base URL.
++ */
++const blocklistURL =
++  'https://friends-public-service-prod.ol.epicgames.com/friends/api/public/blocklist'
++
++export function blockUser({
++  accessToken,
++  accountId,
++  userId,
++}: {
++  accessToken: string
++  accountId: string
++  userId: string
++}) {
++  return friendsService.post(
++    `${blocklistURL}/${accountId}/${userId}`,
++    {},
++    {
++      headers: {
++        Authorization: `bearer ${accessToken}`,
++      },
++    },
++  )
++}
++
++export function unblockUser({
++  accessToken,
++  accountId,
++  userId,
++}: {
++  accessToken: string
++  accountId: string
++  userId: string
++}) {
++  return friendsService.delete(`${blocklistURL}/${accountId}/${userId}`, {
++    headers: {
++      Authorization: `bearer ${accessToken}`,
++    },
++  })
++}
+diff --git a/src/services/endpoints/lookup.ts b/src/services/endpoints/lookup.ts
+index 2ae5082..85e4452 100644
+--- a/src/services/endpoints/lookup.ts
++++ b/src/services/endpoints/lookup.ts
+@@ -5,6 +5,8 @@ import type {
+ 
+ import { publicAccountService } from '../config/public-account'
+ 
++import { buildAccountIdsQuery } from '../../lib/parsers/friends'
++
+ export function findUserByAccountId({
+   accessToken,
+   accountId,
+@@ -57,3 +59,23 @@ export function findUserByExternalDisplayName({
+     }
+   )
+ }
++
++/**
++ * Up to 100 accounts per request. The URL is absolute: joined to the base
++ * URL, axios would add a slash before the query.
++ */
++export function findUsersByAccountIds({
++  accessToken,
++  accountIds,
++}: {
++  accessToken: string
++  accountIds: Array<string>
++}) {
++  return publicAccountService.get<
++    Array<LookupFindOneByDisplayNameResponse>
++  >(`${publicAccountService.defaults.baseURL}?${buildAccountIdsQuery(accountIds)}`, {
++    headers: {
++      Authorization: `bearer ${accessToken}`,
++    },
++  })
++}
+diff --git a/src/services/endpoints/party.ts b/src/services/endpoints/party.ts
+index 7e26cf3..3ab72e5 100644
+--- a/src/services/endpoints/party.ts
++++ b/src/services/endpoints/party.ts
+@@ -2,6 +2,7 @@ import type {
+   FetchPartyResponse,
+   PartyInviteResponse,
+   PartyKickResponse,
++  PartyPatchBody,
+ } from '../../types/services/party'
+ 
+ import { partyService } from '../config/party'
+@@ -79,3 +80,39 @@ export function removeInvite({
+     }
+   )
+ }
++
++export function promote({
++  accessToken,
++  accountId,
++  partyId,
++}: {
++  accessToken: string
++  accountId: string
++  partyId: string
++}) {
++  return partyService.post(
++    `/parties/${partyId}/members/${accountId}/promote`,
++    {},
++    {
++      headers: {
++        Authorization: `bearer ${accessToken}`,
++      },
++    }
++  )
++}
++
++export function updateParty({
++  accessToken,
++  body,
++  partyId,
++}: {
++  accessToken: string
++  body: PartyPatchBody
++  partyId: string
++}) {
++  return partyService.patch(`/parties/${partyId}`, body, {
++    headers: {
++      Authorization: `bearer ${accessToken}`,
++    },
++  })
++}
+diff --git a/src/state/settings/customizable-menu.ts b/src/state/settings/customizable-menu.ts
+index 3cf3d53..b0cd656 100644
+--- a/src/state/settings/customizable-menu.ts
++++ b/src/state/settings/customizable-menu.ts
+@@ -49,6 +49,7 @@ export const customizableMenuSettingsRelations: Record<
+   ],
+   accountManagement: [
+     'vbucksInformation',
++    'friends',
+     'redeemCodes',
+     'devicesAuth',
+     'epicGamesSettings',
+diff --git a/src/types/friends-list.d.ts b/src/types/friends-list.d.ts
+new file mode 100644
+index 0000000..df6edc6
+--- /dev/null
++++ b/src/types/friends-list.d.ts
+@@ -0,0 +1,39 @@
++/**
++ * Epic Games friends of an account. Not the same as `FriendRecord`, the
++ * local list of players to invite from the party page.
++ */
++
++export type FriendsListType = 'friends' | 'incoming' | 'outgoing' | 'blocked'
++
++export type FriendsEntry = {
++  accountId: string
++  /**
++   * null when Epic has no usable name: the page shows a placeholder
++   */
++  displayName: string | null
++  created: string | null
++  mutual: number | null
++}
++
++export type FriendsLists = Record<FriendsListType, Array<FriendsEntry>>
++
++export type FriendsSummary = FriendsLists & {
++  success: boolean
++  error?: string
++}
++
++export type FriendsActionType =
++  | 'add'
++  | 'accept'
++  | 'reject'
++  | 'cancel'
++  | 'remove'
++  | 'block'
++  | 'unblock'
++
++export type FriendsActionResponse = {
++  success: boolean
++  error?: string
++  accountId?: string
++  displayName?: string | null
++}
+diff --git a/src/types/party-info.d.ts b/src/types/party-info.d.ts
+new file mode 100644
+index 0000000..3bedd42
+--- /dev/null
++++ b/src/types/party-info.d.ts
+@@ -0,0 +1,36 @@
++export type PartyMemberInfo = {
++  accountId: string
++  /**
++   * null when the name is unknown: the page shows a placeholder
++   */
++  displayName: string | null
++  isLeader: boolean
++  joinedAt: string | null
++}
++
++export type PartyInfoData = {
++  partyId: string
++  size: number
++  maxSize: number
++  isPrivate: boolean
++  members: Array<PartyMemberInfo>
++}
++
++export type PartyInfo = {
++  success: boolean
++  error?: string
++  errorCode?: string
++  /**
++   * null when the account is not in a party
++   */
++  party: PartyInfoData | null
++  isLeader: boolean
++}
++
++export type PartyMemberActionType = 'kick' | 'promote'
++
++export type PartyActionResponse = {
++  success: boolean
++  error?: string
++  errorCode?: string
++}
+diff --git a/src/types/services/friends.d.ts b/src/types/services/friends.d.ts
+index a187cfb..4fed68a 100644
+--- a/src/types/services/friends.d.ts
++++ b/src/types/services/friends.d.ts
+@@ -6,3 +6,18 @@ export type FetchFriendResponse = {
+   favorite: boolean
+   created: string
+ }
++
++export type FriendsSummaryEntry = {
++  accountId: string
++  alias?: string
++  created?: string
++  favorite?: boolean
++  mutual?: number
++}
++
++export type FriendsSummaryResponse = {
++  friends?: Array<FriendsSummaryEntry>
++  incoming?: Array<FriendsSummaryEntry>
++  outgoing?: Array<FriendsSummaryEntry>
++  blocklist?: Array<Pick<FriendsSummaryEntry, 'accountId'>>
++}
+diff --git a/src/types/services/party.d.ts b/src/types/services/party.d.ts
+index 994905c..9f3acef 100644
+--- a/src/types/services/party.d.ts
++++ b/src/types/services/party.d.ts
+@@ -38,3 +38,23 @@ export type FetchPartyResponse = {
+ export type PartyKickResponse = Record<string, unknown>
+ 
+ export type PartyInviteResponse = Record<string, unknown>
++
++export type PartyPatchBody = {
++  config: {
++    join_confirmation: boolean
++    joinability: PartyData['config']['joinability']
++    max_size: number
++    discoverability: PartyData['config']['discoverability']
++  }
++  meta: {
++    delete: Array<string>
++    update: Record<string, string>
++  }
++  party_state_overridden: Record<string, never>
++  party_privacy_type: PartyData['config']['joinability']
++  party_type: string
++  party_sub_type: string
++  max_number_of_members: number
++  invite_ttl_seconds: number
++  revision: number
++}
+-- 
+2.43.0
+
