@@ -12,6 +12,7 @@ import enUS_zones from './en-US/zones.json'
 import enUS_stwOperations_AutoKick from './en-US/stw-operations/auto-kick.json'
 import enUS_stwOperations_TaxiService from './en-US/stw-operations/taxi-service.json'
 import enUS_stwOperations_HomebaseName from './en-US/stw-operations/homebase-name.json'
+import enUS_stwOperations_Homebase from './en-US/stw-operations/homebase.json'
 import enUS_stwOperations_Inventory from './en-US/stw-operations/inventory.json'
 import enUS_stwOperations_Schematics from './en-US/stw-operations/schematics.json'
 import enUS_stwOperations_SaveQuests from './en-US/stw-operations/save-quests.json'
@@ -45,6 +46,7 @@ const enUS = {
     'auto-kick': enUS_stwOperations_AutoKick,
     'taxi-service': enUS_stwOperations_TaxiService,
     'homebase-name': enUS_stwOperations_HomebaseName,
+    homebase: enUS_stwOperations_Homebase,
     inventory: enUS_stwOperations_Inventory,
     schematics: enUS_stwOperations_Schematics,
     'save-quests': enUS_stwOperations_SaveQuests,
@@ -87,6 +89,7 @@ import es419_zones from './es-419/zones.json'
 import es419_stwOperations_AutoKick from './es-419/stw-operations/auto-kick.json'
 import es419_stwOperations_TaxiService from './es-419/stw-operations/taxi-service.json'
 import es419_stwOperations_HomebaseName from './es-419/stw-operations/homebase-name.json'
+import es419_stwOperations_Homebase from './es-419/stw-operations/homebase.json'
 import es419_stwOperations_Inventory from './es-419/stw-operations/inventory.json'
 import es419_stwOperations_Schematics from './es-419/stw-operations/schematics.json'
 import es419_stwOperations_SaveQuests from './es-419/stw-operations/save-quests.json'
@@ -120,6 +123,7 @@ const es419 = {
     'auto-kick': es419_stwOperations_AutoKick,
     'taxi-service': es419_stwOperations_TaxiService,
     'homebase-name': es419_stwOperations_HomebaseName,
+    homebase: es419_stwOperations_Homebase,
     inventory: es419_stwOperations_Inventory,
     schematics: es419_stwOperations_Schematics,
     'save-quests': es419_stwOperations_SaveQuests,

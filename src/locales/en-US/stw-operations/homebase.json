@@ -1,0 +1,12 @@
+{
+  "no-account": "Select an account to view its Homebase.",
+  "reload": "Reload",
+  "load-failed": "Could not load the Homebase",
+  "locked": "You have not unlocked the Storm Shield in this zone yet.",
+  "storm-shield-level": "Storm Shield level",
+  "endurance-wave": "Highest Endurance wave",
+  "amplifiers": "Placed amplifiers",
+  "edit-permissions": "Edit permissions ({{count}})",
+  "no-edit-permissions": "Nobody else can edit this base.",
+  "unknown-account": "Unknown account"
+}

@@ -245,6 +245,21 @@ export function SidebarMenu({
                       </Link>
                     </li>
                   )}
+                  {getMenuOptionVisibility('homebase') && (
+                    <li className="item">
+                      <Link
+                        to="/stw-operations/homebase"
+                        className={currentClassNameHover}
+                        activeProps={{
+                          className: cn(activeClassName),
+                        }}
+                        onClick={goToPage}
+                        onAuxClick={whatIsThis()}
+                      >
+                        {t('stw-operations.options.homebase')}
+                      </Link>
+                    </li>
+                  )}
                   {getMenuOptionVisibility('inventory') && (
                     <li className="item">
                       <Link

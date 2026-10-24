@@ -40,6 +40,7 @@ export const customizableMenuSettingsRelations: Record<
     'saveQuests',
     'dailyQuests',
     'homebaseName',
+    'homebase',
     'inventory',
     'schematics',
     'xpBoosts',

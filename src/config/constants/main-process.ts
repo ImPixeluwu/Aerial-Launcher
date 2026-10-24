@@ -126,6 +126,7 @@ export enum ElectronAPIEventKeys {
   InventoryGetOverview = 'inventory:get-overview',
 
   SchematicsGetOverview = 'schematics:get-overview',
+  HomebaseGetOverview = 'homebase:get-overview',
 
   XPBoostsAccountProfileRequest = 'xpboosts:account-profile:request',
   XPBoostsAccountProfileResponse = 'xpboosts:account-profile:response',

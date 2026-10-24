@@ -22,6 +22,7 @@ import { Route as StwOperationsSaveQuestsRouteImport } from './routes/stw-operat
 import { Route as StwOperationsPartyRouteImport } from './routes/stw-operations/party/route'
 import { Route as StwOperationsInventoryRouteImport } from './routes/stw-operations/inventory/route'
 import { Route as StwOperationsHomebaseNameRouteImport } from './routes/stw-operations/homebase-name/route'
+import { Route as StwOperationsHomebaseRouteImport } from './routes/stw-operations/homebase/route'
 import { Route as StwOperationsDailyQuestsRouteImport } from './routes/stw-operations/daily-quests/route'
 import { Route as StwOperationsAutomationRouteImport } from './routes/stw-operations/automation/route'
 import { Route as StwOperationsAutoLlamasRouteImport } from './routes/stw-operations/auto-llamas/route'
@@ -99,6 +100,13 @@ const StwOperationsHomebaseNameRouteRoute =
     path: '/stw-operations/homebase-name',
     getParentRoute: () => rootRoute,
   } as any)
+
+const StwOperationsHomebaseRouteRoute = StwOperationsHomebaseRouteImport.update(
+  {
+    path: '/stw-operations/homebase',
+    getParentRoute: () => rootRoute,
+  } as any,
+)
 
 const StwOperationsDailyQuestsRouteRoute =
   StwOperationsDailyQuestsRouteImport.update({
@@ -237,6 +245,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsDailyQuestsRouteImport
       parentRoute: typeof rootRoute
     }
+    '/stw-operations/homebase': {
+      preLoaderRoute: typeof StwOperationsHomebaseRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/homebase-name': {
       preLoaderRoute: typeof StwOperationsHomebaseNameRouteImport
       parentRoute: typeof rootRoute
@@ -297,6 +309,7 @@ export const routeTree = rootRoute.addChildren([
   StwOperationsAutoLlamasRouteRoute,
   StwOperationsAutomationRouteRoute,
   StwOperationsDailyQuestsRouteRoute,
+  StwOperationsHomebaseRouteRoute,
   StwOperationsHomebaseNameRouteRoute,
   StwOperationsInventoryRouteRoute,
   StwOperationsPartyRouteRoute,

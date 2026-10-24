@@ -13,6 +13,7 @@ import type {
 import type { InventoryProfileId } from '../../types/inventory'
 import type { SchematicsProfileId } from '../../types/schematics'
 import type { MCPHomebaseNameResponse } from '../../types/services/mcp/homebase-name'
+import type { MCPQueryProfileMetadata } from '../../types/services/mcp/metadata-profile'
 import type {
   MCPActivateConsumableResponse,
   MCPClientQuestLoginResponse,
@@ -110,6 +111,28 @@ export function getQueryProfileInventory({
       },
       params: {
         profileId,
+        rvn: -1,
+      },
+    }
+  )
+}
+
+export function getQueryProfileMetadata({
+  accessToken,
+  accountId,
+}: {
+  accessToken: string
+  accountId: string
+}) {
+  return baseGameService.post<MCPQueryProfileMetadata>(
+    `/profile/${accountId}/client/QueryProfile`,
+    {},
+    {
+      headers: {
+        Authorization: `bearer ${accessToken}`,
+      },
+      params: {
+        profileId: 'metadata',
         rvn: -1,
       },
     }

@@ -1,0 +1,12 @@
+{
+  "no-account": "Selecciona una cuenta para ver su Homebase.",
+  "reload": "Recargar",
+  "load-failed": "No se pudo cargar la Homebase",
+  "locked": "Aún no has desbloqueado el Escudo Antitormentas de esta zona.",
+  "storm-shield-level": "Nivel del Escudo Antitormentas",
+  "endurance-wave": "Oleada máxima de Resistencia",
+  "amplifiers": "Amplificadores colocados",
+  "edit-permissions": "Permisos de edición ({{count}})",
+  "no-edit-permissions": "Nadie más puede editar esta base.",
+  "unknown-account": "Cuenta desconocida"
+}

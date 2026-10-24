@@ -40,6 +40,7 @@ import { Authentication } from './core/authentication'
 import { ClaimRewards } from './core/claim-rewards'
 import { DevicesAuthManager } from './core/devices-auth'
 import { EULATracking } from './core/eula-tracking'
+import { Homebase } from './core/homebase'
 import { Inventory } from './core/inventory'
 import { FortniteLauncher } from './core/launcher'
 import {
@@ -243,6 +244,13 @@ const gotTheLock = app.requestSingleInstanceLock()
       ElectronAPIEventKeys.SchematicsGetOverview,
       (_, account: AccountData) => {
         return Schematics.getOverview(account)
+      },
+    )
+
+    ipcMain.handle(
+      ElectronAPIEventKeys.HomebaseGetOverview,
+      (_, account: AccountData) => {
+        return Homebase.getOverview(account)
       },
     )
 

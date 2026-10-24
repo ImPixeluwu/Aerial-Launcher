@@ -22,6 +22,29 @@ export function findUserByAccountId({
   )
 }
 
+export function findUsersByAccountIds({
+  accessToken,
+  accountIds,
+}: {
+  accessToken: string
+  accountIds: Array<string>
+}) {
+  return publicAccountService.get<Array<LookupFindOneByDisplayNameResponse>>(
+    '',
+    {
+      headers: {
+        Authorization: `bearer ${accessToken}`,
+      },
+      params: {
+        accountId: accountIds,
+      },
+      paramsSerializer: {
+        indexes: null,
+      },
+    }
+  )
+}
+
 export function findUserByDisplayName({
   accessToken,
   displayName,
