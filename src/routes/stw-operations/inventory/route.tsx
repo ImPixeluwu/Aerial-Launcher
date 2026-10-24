@@ -154,8 +154,8 @@ function Content() {
 
   return (
     <div className="flex flex-col flex-grow gap-4">
-      <div id="inventory-toolbar" className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-grow min-w-48">
+      <div id="inventory-toolbar" className="flex flex-col gap-3">
+        <div className="relative">
           <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
             className="pl-8"
@@ -165,63 +165,65 @@ function Content() {
             spellCheck={false}
           />
         </div>
-        <Select
-          value={profileId}
-          onValueChange={(value) => setProfileId(value as typeof profileId)}
-          disabled={isLoading}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {inventoryProfileIds.map((id) => (
-              <SelectItem key={id} value={id}>
-                {t(`inventory.profile.${id}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={sortField}
-          onValueChange={(value) => setSortField(value as typeof sortField)}
-        >
-          <SelectTrigger
-            className="w-40"
-            aria-label={t("inventory.sort.label")}
-            title={t("inventory.sort.label")}
+        <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={profileId}
+            onValueChange={(value) => setProfileId(value as typeof profileId)}
+            disabled={isLoading}
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {inventorySortFields.map((field) => (
-              <SelectItem key={field} value={field}>
-                {t(`inventory.sort.${field}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={toggleSortDirection}
-          aria-label={sortDirectionLabel}
-          title={sortDirectionLabel}
-        >
-          {sortDirection === "desc" ? (
-            <ArrowDownWideNarrow className="size-4" />
-          ) : (
-            <ArrowUpNarrowWide className="size-4" />
-          )}
-        </Button>
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={loadOverview}
-          disabled={isLoading}
-          title={t("inventory.reload")}
-        >
-          <UpdateIcon className={cn({ "animate-spin": isLoading })} />
-        </Button>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {inventoryProfileIds.map((id) => (
+                <SelectItem key={id} value={id}>
+                  {t(`inventory.profile.${id}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={sortField}
+            onValueChange={(value) => setSortField(value as typeof sortField)}
+          >
+            <SelectTrigger
+              className="w-40"
+              aria-label={t("inventory.sort.label")}
+              title={t("inventory.sort.label")}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {inventorySortFields.map((field) => (
+                <SelectItem key={field} value={field}>
+                  {t(`inventory.sort.${field}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={toggleSortDirection}
+            aria-label={sortDirectionLabel}
+            title={sortDirectionLabel}
+          >
+            {sortDirection === "desc" ? (
+              <ArrowDownWideNarrow className="size-4" />
+            ) : (
+              <ArrowUpNarrowWide className="size-4" />
+            )}
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={loadOverview}
+            disabled={isLoading}
+            title={t("inventory.reload")}
+          >
+            <UpdateIcon className={cn({ "animate-spin": isLoading })} />
+          </Button>
+        </div>
       </div>
 
       {/* One row per filter, so a wider counter only wraps its own row */}
