@@ -13,6 +13,35 @@
     "ingredients": "Ingredientes",
     "materials": "Materiales"
   },
+  "filter": {
+    "category": "Categoría",
+    "rarity": "Rareza"
+  },
+  "group": {
+    "ranged": "A distancia",
+    "melee": "Cuerpo a cuerpo",
+    "traps": "Trampas",
+    "materials": "Materiales"
+  },
+  "type": {
+    "assault": "Asalto",
+    "pistol": "Pistola",
+    "sniper": "Francotirador",
+    "shotgun": "Escopeta",
+    "smg": "Subfusil",
+    "explosive": "Explosivo",
+    "melee_sword": "Espada",
+    "melee_axe": "Hacha",
+    "melee_scythe": "Guadaña",
+    "melee_spear": "Lanza",
+    "melee_hammer": "Martillo",
+    "melee_bat": "Garrote",
+    "trap_floor": "Trampa de suelo",
+    "trap_wall": "Trampa de pared",
+    "trap_ceiling": "Trampa de techo",
+    "ingredients": "Ingredientes",
+    "building-mats": "Materiales de construcción"
+  },
   "rarity": {
     "c": "Común",
     "uc": "Poco común",

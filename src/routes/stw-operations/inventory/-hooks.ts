@@ -1,14 +1,22 @@
 import type { RarityType } from '../../../config/constants/resources'
 import type {
-  InventoryCategory,
+  InventoryGroup,
+  InventoryItemType,
   InventoryOverview,
   InventoryProfileId,
 } from '../../../types/inventory'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useDebounce } from '@uidotdev/usehooks'
 
+import { inventoryTypesByGroup } from '../../../config/constants/inventory'
+
 import { useGetSelectedAccount } from '../../../hooks/accounts'
+
+import {
+  countInventoryItems,
+  filterInventoryItems,
+} from '../../../lib/parsers/inventory-list'
 
 export function useInventoryData() {
   const { selected } = useGetSelectedAccount()
@@ -16,7 +24,8 @@ export function useInventoryData() {
   const [profileId, setProfileId] = useState<InventoryProfileId>('theater0')
   const [overview, setOverview] = useState<InventoryOverview | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [categories, setCategories] = useState<Array<InventoryCategory>>([])
+  const [groups, setGroupsState] = useState<Array<InventoryGroup>>([])
+  const [types, setTypes] = useState<Array<InventoryItemType>>([])
   const [rarities, setRarities] = useState<Array<RarityType>>([])
   const [searchValue, setSearchValue] = useState('')
   const [selectedItemKey, setSelectedItemKey] = useState<string | null>(null)
@@ -24,8 +33,17 @@ export function useInventoryData() {
 
   const debouncedSearchValue = useDebounce(searchValue, 200)
 
+  // Unselecting a category also drops its types
+  const setGroups = (value: Array<InventoryGroup>) => {
+    const allowedTypes = value.flatMap((group) => inventoryTypesByGroup[group])
+
+    setGroupsState(value)
+    setTypes((current) => current.filter((type) => allowedTypes.includes(type)))
+  }
+
   const resetFilters = () => {
-    setCategories([])
+    setGroupsState([])
+    setTypes([])
     setRarities([])
     setSearchValue('')
   }
@@ -82,44 +100,38 @@ export function useInventoryData() {
     loadOverview()
   }, [selected?.accountId, profileId])
 
-  const filteredItems = useMemo(() => {
-    const items = overview?.items ?? []
-    const needle = debouncedSearchValue.trim().toLowerCase()
+  const filteredItems = useMemo(
+    () =>
+      filterInventoryItems(overview?.items ?? [], {
+        groups,
+        types,
+        rarities,
+        search: debouncedSearchValue,
+      }),
+    [overview, groups, types, rarities, debouncedSearchValue],
+  )
+  const counts = useMemo(
+    () => countInventoryItems(overview?.items ?? []),
+    [overview],
+  )
 
-    return items.filter((item) => {
-      if (categories.length > 0 && !categories.includes(item.category)) {
-        return false
-      }
-
-      if (
-        rarities.length > 0 &&
-        (!item.rarity || !rarities.includes(item.rarity))
-      ) {
-        return false
-      }
-
-      if (
-        needle &&
-        !`${item.name} ${item.templateId}`.toLowerCase().includes(needle)
-      ) {
-        return false
-      }
-
-      return true
-    })
-  }, [overview, categories, rarities, debouncedSearchValue])
+  // The grid renders in the background, so filter buttons respond at once
+  const deferredItems = useDeferredValue(filteredItems)
 
   const selectedItem =
     overview?.items.find((item) => item.itemKey === selectedItemKey) ?? null
   const hasActiveFilters =
-    categories.length > 0 ||
+    groups.length > 0 ||
+    types.length > 0 ||
     rarities.length > 0 ||
     searchValue.trim().length > 0
 
   return {
-    categories,
-    filteredItems,
+    counts,
+    filteredItems: deferredItems,
+    groups,
     hasActiveFilters,
+    isFiltering: deferredItems !== filteredItems,
     isLoading,
     overview,
     profileId,
@@ -127,13 +139,15 @@ export function useInventoryData() {
     searchValue,
     selected,
     selectedItem,
+    types,
 
     loadOverview,
     resetFilters,
-    setCategories,
+    setGroups,
     setProfileId,
     setRarities,
     setSearchValue,
     setSelectedItemKey,
+    setTypes,
   }
 }

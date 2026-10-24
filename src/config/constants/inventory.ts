@@ -1,5 +1,7 @@
 import type {
   InventoryCategory,
+  InventoryGroup,
+  InventoryItemType,
   InventoryProfileId,
 } from '../../types/inventory'
 
@@ -18,6 +20,33 @@ export const inventoryCategories: Array<InventoryCategory> = [
   'ingredients',
   'materials',
 ]
+
+export const inventoryGroups: Array<InventoryGroup> = [
+  'ranged',
+  'melee',
+  'traps',
+  'materials',
+]
+
+/**
+ * Types shown once their category is selected, in this order.
+ */
+export const inventoryTypesByGroup: Record<
+  InventoryGroup,
+  Array<InventoryItemType>
+> = {
+  ranged: ['assault', 'pistol', 'sniper', 'shotgun', 'smg', 'explosive'],
+  melee: [
+    'melee_sword',
+    'melee_axe',
+    'melee_scythe',
+    'melee_spear',
+    'melee_hammer',
+    'melee_bat',
+  ],
+  traps: ['trap_floor', 'trap_wall', 'trap_ceiling'],
+  materials: ['ingredients', 'building-mats'],
+}
 
 export const inventoryRarityOrder: Array<RarityType> = [
   RarityType.Mythic,

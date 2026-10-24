@@ -1,5 +1,7 @@
 import type { InventoryItem } from "../../../types/inventory";
 
+import { memo } from "react";
+
 import { createRoute } from "@tanstack/react-router";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import { Search, X } from "lucide-react";
@@ -20,6 +22,10 @@ import {
 } from "../../../components/ui/breadcrumb";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
+import {
+  FilterCount,
+  FilterLabel,
+} from "../../../components/stw-items/filter-parts";
 import { ItemDetailDialog } from "../../../components/stw-items/item-detail-dialog";
 import {
   ItemImage,
@@ -28,6 +34,7 @@ import {
   formatQuantity,
   rarityStyle,
 } from "../../../components/stw-items/item-parts";
+import { VirtualItemGrid } from "../../../components/stw-items/virtual-item-grid";
 import {
   Select,
   SelectContent,
@@ -43,9 +50,10 @@ import {
 import { useInventoryData } from "./-hooks";
 
 import {
-  inventoryCategories,
+  inventoryGroups,
   inventoryProfileIds,
   inventoryRarityOrder,
+  inventoryTypesByGroup,
 } from "../../../config/constants/inventory";
 import { cn } from "../../../lib/utils";
 
@@ -83,9 +91,11 @@ function Content() {
   const { t } = useTranslation(["stw-operations"]);
 
   const {
-    categories,
+    counts,
     filteredItems,
+    groups,
     hasActiveFilters,
+    isFiltering,
     isLoading,
     overview,
     profileId,
@@ -93,14 +103,16 @@ function Content() {
     searchValue,
     selected,
     selectedItem,
+    types,
 
     loadOverview,
     resetFilters,
-    setCategories,
+    setGroups,
     setProfileId,
     setRarities,
     setSearchValue,
     setSelectedItemKey,
+    setTypes,
   } = useInventoryData();
 
   if (!selected) {
@@ -122,6 +134,9 @@ function Content() {
     }
   };
 
+  const availableTypes = groups
+    .flatMap((group) => inventoryTypesByGroup[group])
+    .filter((type) => (counts.typeCounts[type] ?? 0) > 0);
   const availableRarities = inventoryRarityOrder.filter(
     (rarity) => (overview?.rarityCounts[rarity] ?? 0) > 0,
   );
@@ -129,6 +144,16 @@ function Content() {
   return (
     <div className="flex flex-col flex-grow gap-4">
       <div id="inventory-toolbar" className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-grow min-w-48">
+          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+          <Input
+            className="pl-8"
+            placeholder={t("inventory.search-placeholder")}
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
+            spellCheck={false}
+          />
+        </div>
         <Select
           value={profileId}
           onValueChange={(value) => setProfileId(value as typeof profileId)}
@@ -156,69 +181,84 @@ function Content() {
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* One row per filter, so a wider counter only wraps its own row */}
+      <div className="grid grid-cols-[auto,1fr] items-center gap-x-3 gap-y-2">
+        <FilterLabel>{t("inventory.filter.category")}</FilterLabel>
         <ToggleGroup
           type="multiple"
           variant="outline"
-          value={categories}
-          onValueChange={(value) => setCategories(value as typeof categories)}
+          className="flex-wrap justify-start"
+          value={groups}
+          onValueChange={(value) => setGroups(value as typeof groups)}
         >
-          {inventoryCategories.map((category) => (
-            <ToggleGroupItem key={category} value={category}>
-              {t(`inventory.category.${category}`)}
-              <span className="ml-1 text-muted-foreground">
-                {overview?.categoryCounts[category] ?? 0}
-              </span>
+          {inventoryGroups.map((group) => (
+            <ToggleGroupItem key={group} value={group}>
+              {t(`inventory.group.${group}`)}
+              <FilterCount value={counts.groupCounts[group]} />
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
 
-        {availableRarities.length > 0 && (
+        {availableTypes.length > 0 && (
           <ToggleGroup
             type="multiple"
             variant="outline"
-            value={rarities}
-            onValueChange={(value) => setRarities(value as typeof rarities)}
+            className="col-start-2 flex-wrap justify-start"
+            value={types}
+            onValueChange={(value) => setTypes(value as typeof types)}
           >
-            {availableRarities.map((rarity) => (
-              <ToggleGroupItem
-                key={rarity}
-                value={rarity}
-                title={t(`inventory.rarity.${rarity}`)}
-              >
-                <span
-                  className="size-2.5 rounded-full mr-1"
-                  style={{ backgroundColor: raritiesColor[rarity] }}
-                />
-                {overview?.rarityCounts[rarity] ?? 0}
+            {availableTypes.map((type) => (
+              <ToggleGroupItem key={type} value={type}>
+                {t(`inventory.type.${type}`)}
+                <FilterCount value={counts.typeCounts[type]} />
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
         )}
 
-        <div className="relative flex-grow min-w-48">
-          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder={t("inventory.search-placeholder")}
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            spellCheck={false}
-          />
-        </div>
+        {availableRarities.length > 0 && (
+          <>
+            <FilterLabel>{t("inventory.filter.rarity")}</FilterLabel>
+            <ToggleGroup
+              type="multiple"
+              variant="outline"
+              className="flex-wrap justify-start"
+              value={rarities}
+              onValueChange={(value) => setRarities(value as typeof rarities)}
+            >
+              {availableRarities.map((rarity) => (
+                <ToggleGroupItem
+                  key={rarity}
+                  value={rarity}
+                  title={t(`inventory.rarity.${rarity}`)}
+                >
+                  <span
+                    className="size-2.5 rounded-full mr-1"
+                    style={{ backgroundColor: raritiesColor[rarity] }}
+                  />
+                  <span className="tabular-nums">
+                    {overview?.rarityCounts[rarity] ?? 0}
+                  </span>
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </>
+        )}
+      </div>
 
+      <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
+        <span className="tabular-nums">
+          {t("inventory.items-shown", { count: filteredItems.length })}
+        </span>
         <Button
           variant="ghost"
+          size="sm"
           onClick={resetFilters}
           disabled={!hasActiveFilters}
         >
           <X className="size-4 mr-1" />
           {t("inventory.clear-filters")}
         </Button>
-      </div>
-
-      <div className="text-sm text-muted-foreground">
-        {t("inventory.items-shown", { count: filteredItems.length })}
       </div>
 
       {overview && !overview.success ? (
@@ -234,20 +274,16 @@ function Content() {
           <p>{t("inventory.no-matches")}</p>
         </div>
       ) : (
-        <div
-          className={cn(
-            "grid gap-3 grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))]",
-            { "opacity-60": isLoading },
+        <VirtualItemGrid
+          cardHeight={cardHeight}
+          items={filteredItems}
+          isStale={isLoading || isFiltering}
+          selectedIndex={selectedIndex}
+          getKey={(item) => item.itemKey}
+          renderItem={(item) => (
+            <ItemCard item={item} onSelect={setSelectedItemKey} />
           )}
-        >
-          {filteredItems.map((item) => (
-            <ItemCard
-              key={item.itemKey}
-              item={item}
-              onSelect={() => setSelectedItemKey(item.itemKey)}
-            />
-          ))}
-        </div>
+        />
       )}
 
       <GoToTop containerId="inventory-toolbar" />
@@ -267,21 +303,24 @@ function Content() {
   );
 }
 
-function ItemCard({
+// Fixed card height: every row of the virtual grid has the same size
+const cardHeight = 136;
+
+const ItemCard = memo(function ItemCard({
   item,
   onSelect,
 }: {
   item: InventoryItem;
-  onSelect: () => void;
+  onSelect: (itemKey: string) => void;
 }) {
   const { t } = useTranslation(["stw-operations"]);
 
   return (
     <button
       type="button"
-      className="flex flex-col items-center gap-1 rounded-md border-2 p-2 text-left hover:brightness-125 transition"
-      style={rarityStyle(item.rarity)}
-      onClick={onSelect}
+      className="flex w-full flex-col items-center gap-1 overflow-hidden rounded-md border-2 p-2 text-left hover:brightness-125 transition"
+      style={{ ...rarityStyle(item.rarity), height: cardHeight }}
+      onClick={() => onSelect(item.itemKey)}
       title={t("inventory.view-details")}
     >
       <div className="relative w-full">
@@ -308,7 +347,7 @@ function ItemCard({
       </span>
     </button>
   );
-}
+});
 
 function ItemDetail({
   item,
