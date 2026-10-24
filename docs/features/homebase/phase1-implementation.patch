@@ -1,0 +1,1350 @@
+From 6a4929e286660eb3ef7011eff54a5f5c27a328c8 Mon Sep 17 00:00:00 2001
+From: Pixel <53497640+ImPixeluwu@users.noreply.github.com>
+Date: Sat, 24 Oct 2026 20:14:37 +0000
+Subject: [PATCH] Add Save the World Homebase overview
+
+New read-only page under STW Operations that shows the Storm Shield of
+each campaign zone for the active account, read from the "metadata" MCP
+profile: Storm Shield level, highest Endurance wave, placed amplifiers
+and the accounts with edit permission (names resolved in batches of up
+to 100 ids). Zones without a Storm Shield core are shown as locked.
+
+- getQueryProfileMetadata MCP request and findUsersByAccountIds lookup
+- Pure parser in src/lib/parsers/homebase.ts with vitest coverage
+- homebase:get-overview IPC channel and preload bridge
+- Sidebar entry, customizable menu option and en-US/es-419 texts
+---
+ src/components/menu/sidebar.tsx               |  15 +
+ src/config/constants/homebase.ts              |  21 ++
+ src/config/constants/main-process.ts          |   1 +
+ src/kernel/core/homebase.ts                   |  82 +++++
+ src/kernel/main.ts                            |   8 +
+ src/kernel/preload-actions/homebase.ts        |  12 +
+ src/kernel/preload.ts                         |   2 +
+ src/lib/parsers/homebase.test.ts              | 202 +++++++++++++
+ src/lib/parsers/homebase.ts                   | 159 ++++++++++
+ src/lib/validations/schemas/settings.ts       |   1 +
+ src/locales/en-US/sidebar.json                |   1 +
+ .../en-US/stw-operations/homebase.json        |  12 +
+ src/locales/es-419/sidebar.json               |   1 +
+ .../es-419/stw-operations/homebase.json       |  12 +
+ src/locales/resources.ts                      |   4 +
+ src/routeTree.gen.ts                          |  13 +
+ .../settings/-customizable-menu/-index.tsx    |  13 +
+ src/routes/stw-operations/homebase/-hooks.ts  |  69 +++++
+ src/routes/stw-operations/homebase/route.tsx  | 285 ++++++++++++++++++
+ src/services/endpoints/lookup.ts              |  23 ++
+ src/services/endpoints/mcp.ts                 |  23 ++
+ src/state/settings/customizable-menu.ts       |   1 +
+ src/types/homebase.d.ts                       |  22 ++
+ src/types/services/mcp/metadata-profile.d.ts  |  40 +++
+ 24 files changed, 1022 insertions(+)
+ create mode 100644 src/config/constants/homebase.ts
+ create mode 100644 src/kernel/core/homebase.ts
+ create mode 100644 src/kernel/preload-actions/homebase.ts
+ create mode 100644 src/lib/parsers/homebase.test.ts
+ create mode 100644 src/lib/parsers/homebase.ts
+ create mode 100644 src/locales/en-US/stw-operations/homebase.json
+ create mode 100644 src/locales/es-419/stw-operations/homebase.json
+ create mode 100644 src/routes/stw-operations/homebase/-hooks.ts
+ create mode 100644 src/routes/stw-operations/homebase/route.tsx
+ create mode 100644 src/types/homebase.d.ts
+ create mode 100644 src/types/services/mcp/metadata-profile.d.ts
+
+diff --git a/src/components/menu/sidebar.tsx b/src/components/menu/sidebar.tsx
+index e153aae..e9fda05 100644
+--- a/src/components/menu/sidebar.tsx
++++ b/src/components/menu/sidebar.tsx
+@@ -245,6 +245,21 @@ export function SidebarMenu({
+                       </Link>
+                     </li>
+                   )}
++                  {getMenuOptionVisibility('homebase') && (
++                    <li className="item">
++                      <Link
++                        to="/stw-operations/homebase"
++                        className={currentClassNameHover}
++                        activeProps={{
++                          className: cn(activeClassName),
++                        }}
++                        onClick={goToPage}
++                        onAuxClick={whatIsThis()}
++                      >
++                        {t('stw-operations.options.homebase')}
++                      </Link>
++                    </li>
++                  )}
+                   {getMenuOptionVisibility('inventory') && (
+                     <li className="item">
+                       <Link
+diff --git a/src/config/constants/homebase.ts b/src/config/constants/homebase.ts
+new file mode 100644
+index 0000000..9c4a919
+--- /dev/null
++++ b/src/config/constants/homebase.ts
+@@ -0,0 +1,21 @@
++import type { HomebaseZoneId } from '../../types/homebase'
++
++import { World } from './fortnite/world-info'
++
++export const homebaseZoneIds: Array<HomebaseZoneId> = [
++  'pve_01',
++  'pve_02',
++  'pve_03',
++  'pve_04',
++]
++
++export const homebaseZoneWorld: Record<HomebaseZoneId, World> = {
++  pve_01: World.Stonewood,
++  pve_02: World.Plankerton,
++  pve_03: World.CannyValley,
++  pve_04: World.TwinePeaks,
++}
++
++export const homebaseMaxLevel = 10
++export const homebaseMaxEnduranceWave = 30
++export const homebaseLookupBatchSize = 100
+diff --git a/src/config/constants/main-process.ts b/src/config/constants/main-process.ts
+index 494c80d..ad668f1 100644
+--- a/src/config/constants/main-process.ts
++++ b/src/config/constants/main-process.ts
+@@ -126,6 +126,7 @@ export enum ElectronAPIEventKeys {
+   InventoryGetOverview = 'inventory:get-overview',
+ 
+   SchematicsGetOverview = 'schematics:get-overview',
++  HomebaseGetOverview = 'homebase:get-overview',
+ 
+   XPBoostsAccountProfileRequest = 'xpboosts:account-profile:request',
+   XPBoostsAccountProfileResponse = 'xpboosts:account-profile:response',
+diff --git a/src/kernel/core/homebase.ts b/src/kernel/core/homebase.ts
+new file mode 100644
+index 0000000..d9ce917
+--- /dev/null
++++ b/src/kernel/core/homebase.ts
+@@ -0,0 +1,82 @@
++import type { AccountData } from '../../types/accounts'
++import type { HomebaseOverview } from '../../types/homebase'
++
++import { Authentication } from './authentication'
++
++import { findUsersByAccountIds } from '../../services/endpoints/lookup'
++import { getQueryProfileMetadata } from '../../services/endpoints/mcp'
++
++import {
++  applyHomebaseDisplayNames,
++  chunkAccountIds,
++  createEmptyHomebaseOverview,
++  getHomebaseEditorIds,
++  parseHomebaseProfile,
++} from '../../lib/parsers/homebase'
++
++export class Homebase {
++  static async getOverview(account: AccountData): Promise<HomebaseOverview> {
++    const failed = (error: string): HomebaseOverview => ({
++      ...createEmptyHomebaseOverview(),
++      success: false,
++      error,
++    })
++
++    try {
++      const accessToken = await Authentication.verifyAccessToken(account)
++
++      if (!accessToken) {
++        return failed('Could not authenticate the account')
++      }
++
++      const response = await getQueryProfileMetadata({
++        accessToken,
++        accountId: account.accountId,
++      })
++      const overview = parseHomebaseProfile(
++        response.data.profileChanges?.[0]?.profile?.items ?? {},
++      )
++      const displayNames = await Homebase.getDisplayNames(
++        accessToken,
++        getHomebaseEditorIds(overview),
++      )
++
++      return applyHomebaseDisplayNames(overview, displayNames)
++
++      // eslint-disable-next-line @typescript-eslint/no-explicit-any
++    } catch (error: any) {
++      return failed(error?.response?.data?.errorMessage ?? 'Unknown Error')
++    }
++  }
++
++  /**
++   * A failed lookup only hides the names; the ids are still shown.
++   */
++  private static async getDisplayNames(
++    accessToken: string,
++    accountIds: Array<string>,
++  ) {
++    const displayNames = new Map<string, string>()
++
++    await Promise.all(
++      chunkAccountIds(accountIds).map(async (chunk) => {
++        try {
++          const response = await findUsersByAccountIds({
++            accessToken,
++            accountIds: chunk,
++          })
++
++          response.data.forEach((user) => {
++            if (user?.id && user.displayName) {
++              displayNames.set(user.id, user.displayName)
++            }
++          })
++        } catch {
++          // Keep the ids without names.
++        }
++      }),
++    )
++
++    return displayNames
++  }
++}
+diff --git a/src/kernel/main.ts b/src/kernel/main.ts
+index 2a44c64..d42336d 100644
+--- a/src/kernel/main.ts
++++ b/src/kernel/main.ts
+@@ -40,6 +40,7 @@ import { Authentication } from './core/authentication'
+ import { ClaimRewards } from './core/claim-rewards'
+ import { DevicesAuthManager } from './core/devices-auth'
+ import { EULATracking } from './core/eula-tracking'
++import { Homebase } from './core/homebase'
+ import { Inventory } from './core/inventory'
+ import { FortniteLauncher } from './core/launcher'
+ import {
+@@ -246,6 +247,13 @@ const gotTheLock = app.requestSingleInstanceLock()
+       },
+     )
+ 
++    ipcMain.handle(
++      ElectronAPIEventKeys.HomebaseGetOverview,
++      (_, account: AccountData) => {
++        return Homebase.getOverview(account)
++      },
++    )
++
+     ipcMain.handle(ElectronAPIEventKeys.SettingsDetectPath, () => {
+       return SettingsManager.detectGamePath({
+         namespaceId: 'fn',
+diff --git a/src/kernel/preload-actions/homebase.ts b/src/kernel/preload-actions/homebase.ts
+new file mode 100644
+index 0000000..739a5d0
+--- /dev/null
++++ b/src/kernel/preload-actions/homebase.ts
+@@ -0,0 +1,12 @@
++import type { AccountData } from '../../types/accounts'
++import type { HomebaseOverview } from '../../types/homebase'
++
++import { ipcRenderer } from 'electron'
++
++import { ElectronAPIEventKeys } from '../../config/constants/main-process'
++
++export function getHomebaseOverview(
++  account: AccountData,
++): Promise<HomebaseOverview> {
++  return ipcRenderer.invoke(ElectronAPIEventKeys.HomebaseGetOverview, account)
++}
+diff --git a/src/kernel/preload.ts b/src/kernel/preload.ts
+index 04d4313..870298e 100644
+--- a/src/kernel/preload.ts
++++ b/src/kernel/preload.ts
+@@ -13,6 +13,7 @@ import * as customizableMenuActions from './preload-actions/customizable-menu'
+ import * as devicesAuthActions from './preload-actions/devices-auth'
+ import * as eventActions from './preload-actions/events'
+ import * as generalActions from './preload-actions/general'
++import * as homebaseActions from './preload-actions/homebase'
+ import * as inventoryActions from './preload-actions/inventory'
+ import * as launcherActions from './preload-actions/launcher'
+ import * as matchmakingActions from './preload-actions/matchmaking'
+@@ -39,6 +40,7 @@ export const availableElectronAPIs = {
+   ...devicesAuthActions,
+   ...eventActions,
+   ...generalActions,
++  ...homebaseActions,
+   ...inventoryActions,
+   ...launcherActions,
+   ...partyActions,
+diff --git a/src/lib/parsers/homebase.test.ts b/src/lib/parsers/homebase.test.ts
+new file mode 100644
+index 0000000..b333e6b
+--- /dev/null
++++ b/src/lib/parsers/homebase.test.ts
+@@ -0,0 +1,202 @@
++import type { MCPMetadataProfileItem } from '../../types/services/mcp/metadata-profile'
++
++import { describe, expect, it } from 'vitest'
++
++import {
++  applyHomebaseDisplayNames,
++  chunkAccountIds,
++  getHomebaseEditorIds,
++  parseHomebaseProfile,
++} from './homebase'
++
++const editorId = '00000000000000000000000000000001'
++
++function core(
++  zone: string,
++  itemId: string,
++  level: number,
++  archiveNumber: number,
++): MCPMetadataProfileItem {
++  return {
++    templateId: `Outpost:outpostcore_${zone}`,
++    attributes: {
++      cloud_save_info: {
++        saveCount: 1,
++        savedRecords: [
++          {
++            recordFilename: `${itemId}_r0_a${archiveNumber}.sav`,
++            recordIndex: 0,
++            archiveNumber,
++          },
++        ],
++      },
++      level,
++      outpost_core_info: {
++        accountsWithEditPermission: [editorId],
++        highestEnduranceWaveReached: 0,
++        placedBuildings: [0, 1, 2].map((index) => ({
++          buildingTag: `Outpost.BuildingActor.Building.0${index}`,
++          placedTag: `Outpost.PlacementActor.Placement.0${index}`,
++        })),
++      },
++    },
++    quantity: 1,
++  }
++}
++
++// Shape of a real metadata profile (two unlocked zones), with ids replaced.
++const realProfileItems: Record<string, MCPMetadataProfileItem> = {
++  'item-a': core('pve_01', 'item-a', 6, 0),
++  'item-b': core('pve_02', 'item-b', 4, 1),
++}
++
++describe('parseHomebaseProfile', () => {
++  const overview = parseHomebaseProfile(realProfileItems)
++
++  it('always returns the four zones in order', () => {
++    expect(overview.success).toBe(true)
++    expect(overview.zones.map((zone) => zone.zoneId)).toEqual([
++      'pve_01',
++      'pve_02',
++      'pve_03',
++      'pve_04',
++    ])
++  })
++
++  it('reads the unlocked zones', () => {
++    expect(overview.zones[0]).toEqual({
++      zoneId: 'pve_01',
++      unlocked: true,
++      level: 6,
++      highestEnduranceWave: 0,
++      amplifierCount: 3,
++      editPermissions: [{ accountId: editorId, displayName: null }],
++      saveFile: 'item-a_r0_a0.sav',
++    })
++    expect(overview.zones[1].level).toBe(4)
++    expect(overview.zones[1].saveFile).toBe('item-b_r0_a1.sav')
++  })
++
++  it('marks zones without a core as locked', () => {
++    for (const zone of overview.zones.slice(2)) {
++      expect(zone).toEqual({
++        zoneId: zone.zoneId,
++        unlocked: false,
++        level: null,
++        highestEnduranceWave: 0,
++        amplifierCount: 0,
++        editPermissions: [],
++        saveFile: null,
++      })
++    }
++  })
++
++  it('matches template ids case-insensitively and ignores others', () => {
++    const result = parseHomebaseProfile({
++      a: { templateId: 'OUTPOST:OUTPOSTCORE_PVE_03' },
++      b: { templateId: 'Outpost:outpostcore_pve_5' },
++      c: { templateId: 'Outpost:outpostcore_pve_05' },
++      d: { templateId: 'Outpost:other' },
++    })
++
++    expect(result.zones.map((zone) => zone.unlocked)).toEqual([
++      false,
++      false,
++      true,
++      false,
++    ])
++  })
++
++  it('uses defaults when attributes are missing', () => {
++    const zone = parseHomebaseProfile({
++      a: { templateId: 'Outpost:outpostcore_pve_01' },
++    }).zones[0]
++
++    expect(zone).toEqual({
++      zoneId: 'pve_01',
++      unlocked: true,
++      level: null,
++      highestEnduranceWave: 0,
++      amplifierCount: 0,
++      editPermissions: [],
++      saveFile: null,
++    })
++  })
++
++  it('picks the save record with the lowest index', () => {
++    const zone = parseHomebaseProfile({
++      a: {
++        templateId: 'Outpost:outpostcore_pve_01',
++        attributes: {
++          cloud_save_info: {
++            savedRecords: [
++              { recordFilename: 'second.sav', recordIndex: 1 },
++              { recordFilename: 'first.sav', recordIndex: 0 },
++            ],
++          },
++        },
++      },
++    }).zones[0]
++
++    expect(zone.saveFile).toBe('first.sav')
++  })
++
++  it('removes repeated edit permissions', () => {
++    const zone = parseHomebaseProfile({
++      a: {
++        templateId: 'Outpost:outpostcore_pve_01',
++        attributes: {
++          outpost_core_info: {
++            accountsWithEditPermission: [editorId, editorId, 'other'],
++          },
++        },
++      },
++    }).zones[0]
++
++    expect(zone.editPermissions.map(({ accountId }) => accountId)).toEqual([
++      editorId,
++      'other',
++    ])
++  })
++})
++
++describe('display names', () => {
++  it('assigns resolved names by id and leaves the rest empty', () => {
++    const overview = parseHomebaseProfile({
++      a: {
++        templateId: 'Outpost:outpostcore_pve_01',
++        attributes: {
++          outpost_core_info: {
++            accountsWithEditPermission: [editorId, 'unknown'],
++          },
++        },
++      },
++      b: {
++        templateId: 'Outpost:outpostcore_pve_02',
++        attributes: {
++          outpost_core_info: { accountsWithEditPermission: [editorId] },
++        },
++      },
++    })
++
++    expect(getHomebaseEditorIds(overview)).toEqual([editorId, 'unknown'])
++
++    const named = applyHomebaseDisplayNames(
++      overview,
++      new Map([[editorId, 'Friend']]),
++    )
++
++    expect(named.zones[0].editPermissions).toEqual([
++      { accountId: editorId, displayName: 'Friend' },
++      { accountId: 'unknown', displayName: null },
++    ])
++    expect(named.zones[1].editPermissions[0].displayName).toBe('Friend')
++  })
++
++  it('splits lookups into batches of 100', () => {
++    const ids = Array.from({ length: 150 }, (_, index) => `${index}`)
++    const chunks = chunkAccountIds(ids)
++
++    expect(chunks.map((chunk) => chunk.length)).toEqual([100, 50])
++  })
++})
+diff --git a/src/lib/parsers/homebase.ts b/src/lib/parsers/homebase.ts
+new file mode 100644
+index 0000000..d6de1f4
+--- /dev/null
++++ b/src/lib/parsers/homebase.ts
+@@ -0,0 +1,159 @@
++import type {
++  HomebaseOverview,
++  HomebaseZone,
++  HomebaseZoneId,
++} from '../../types/homebase'
++import type { MCPMetadataProfileItem } from '../../types/services/mcp/metadata-profile'
++
++import {
++  homebaseLookupBatchSize,
++  homebaseZoneIds,
++} from '../../config/constants/homebase'
++
++const outpostCorePattern = /^outpost:outpostcore_(pve_\d{2})$/
++
++export function createEmptyHomebaseZone(zoneId: HomebaseZoneId): HomebaseZone {
++  return {
++    zoneId,
++    unlocked: false,
++    level: null,
++    highestEnduranceWave: 0,
++    amplifierCount: 0,
++    editPermissions: [],
++    saveFile: null,
++  }
++}
++
++export function createEmptyHomebaseOverview(): HomebaseOverview {
++  return {
++    success: true,
++    zones: homebaseZoneIds.map(createEmptyHomebaseZone),
++  }
++}
++
++export function getHomebaseZoneId(templateId: unknown): HomebaseZoneId | null {
++  if (typeof templateId !== 'string') {
++    return null
++  }
++
++  const zoneId = templateId.toLowerCase().match(outpostCorePattern)?.[1]
++
++  return zoneId && homebaseZoneIds.includes(zoneId as HomebaseZoneId)
++    ? (zoneId as HomebaseZoneId)
++    : null
++}
++
++function toCount(value: unknown) {
++  return typeof value === 'number' && Number.isFinite(value) ? value : 0
++}
++
++function parseSaveFile(item: MCPMetadataProfileItem) {
++  const records = item.attributes?.cloud_save_info?.savedRecords
++
++  if (!Array.isArray(records)) {
++    return null
++  }
++
++  const sorted = records
++    .filter(
++      (record) =>
++        typeof record?.recordFilename === 'string' &&
++        record.recordFilename.length > 0,
++    )
++    .sort((a, b) => toCount(a.recordIndex) - toCount(b.recordIndex))
++
++  return sorted[0]?.recordFilename ?? null
++}
++
++export function parseHomebaseZone(
++  zoneId: HomebaseZoneId,
++  item: MCPMetadataProfileItem,
++): HomebaseZone {
++  const attributes = item.attributes ?? {}
++  const info = attributes.outpost_core_info ?? {}
++  const level = attributes.level
++  const editors = Array.isArray(info.accountsWithEditPermission)
++    ? info.accountsWithEditPermission.filter(
++        (accountId): accountId is string =>
++          typeof accountId === 'string' && accountId.length > 0,
++      )
++    : []
++  const buildings = Array.isArray(info.placedBuildings)
++    ? info.placedBuildings
++    : []
++
++  return {
++    zoneId,
++    unlocked: true,
++    level: typeof level === 'number' && Number.isFinite(level) ? level : null,
++    highestEnduranceWave: toCount(info.highestEnduranceWaveReached),
++    amplifierCount: buildings.filter(
++      (building) => typeof building?.buildingTag === 'string',
++    ).length,
++    editPermissions: [...new Set(editors)].map((accountId) => ({
++      accountId,
++      displayName: null,
++    })),
++    saveFile: parseSaveFile(item),
++  }
++}
++
++export function parseHomebaseProfile(
++  items: Record<string, MCPMetadataProfileItem>,
++): HomebaseOverview {
++  const found = new Map<HomebaseZoneId, HomebaseZone>()
++
++  Object.values(items).forEach((item) => {
++    const zoneId = getHomebaseZoneId(item?.templateId)
++
++    if (zoneId && !found.has(zoneId)) {
++      found.set(zoneId, parseHomebaseZone(zoneId, item))
++    }
++  })
++
++  return {
++    success: true,
++    zones: homebaseZoneIds.map(
++      (zoneId) => found.get(zoneId) ?? createEmptyHomebaseZone(zoneId),
++    ),
++  }
++}
++
++export function getHomebaseEditorIds(overview: HomebaseOverview) {
++  return [
++    ...new Set(
++      overview.zones.flatMap((zone) =>
++        zone.editPermissions.map(({ accountId }) => accountId),
++      ),
++    ),
++  ]
++}
++
++export function chunkAccountIds(
++  accountIds: Array<string>,
++  size = homebaseLookupBatchSize,
++) {
++  const chunks: Array<Array<string>> = []
++
++  for (let index = 0; index < accountIds.length; index += size) {
++    chunks.push(accountIds.slice(index, index + size))
++  }
++
++  return chunks
++}
++
++export function applyHomebaseDisplayNames(
++  overview: HomebaseOverview,
++  displayNames: Map<string, string>,
++): HomebaseOverview {
++  return {
++    ...overview,
++    zones: overview.zones.map((zone) => ({
++      ...zone,
++      editPermissions: zone.editPermissions.map((permission) => ({
++        ...permission,
++        displayName: displayNames.get(permission.accountId) ?? null,
++      })),
++    })),
++  }
++}
+diff --git a/src/lib/validations/schemas/settings.ts b/src/lib/validations/schemas/settings.ts
+index dcb33a3..e480181 100644
+--- a/src/lib/validations/schemas/settings.ts
++++ b/src/lib/validations/schemas/settings.ts
+@@ -59,6 +59,7 @@ export const customizableMenuSettingsSchema = z
+     saveQuests: z.boolean().default(true),
+     dailyQuests: z.boolean().default(true),
+     homebaseName: z.boolean().default(true),
++    homebase: z.boolean().default(true),
+     inventory: z.boolean().default(true),
+     schematics: z.boolean().default(true),
+     xpBoosts: z.boolean().default(true),
+diff --git a/src/locales/en-US/sidebar.json b/src/locales/en-US/sidebar.json
+index 4a0b069..c8d7085 100644
+--- a/src/locales/en-US/sidebar.json
++++ b/src/locales/en-US/sidebar.json
+@@ -8,6 +8,7 @@
+       "save-quests": "Save Quests",
+       "daily-quests": "Daily Quests",
+       "homebase-name": "Homebase Name",
++      "homebase": "Homebase Overview",
+       "inventory": "Inventory",
+       "schematics": "Schematics",
+       "xp-boosts": "XP Boosts",
+diff --git a/src/locales/en-US/stw-operations/homebase.json b/src/locales/en-US/stw-operations/homebase.json
+new file mode 100644
+index 0000000..32d56c1
+--- /dev/null
++++ b/src/locales/en-US/stw-operations/homebase.json
+@@ -0,0 +1,12 @@
++{
++  "no-account": "Select an account to view its Homebase.",
++  "reload": "Reload",
++  "load-failed": "Could not load the Homebase",
++  "locked": "You have not unlocked the Storm Shield in this zone yet.",
++  "storm-shield-level": "Storm Shield level",
++  "endurance-wave": "Highest Endurance wave",
++  "amplifiers": "Placed amplifiers",
++  "edit-permissions": "Edit permissions ({{count}})",
++  "no-edit-permissions": "Nobody else can edit this base.",
++  "unknown-account": "Unknown account"
++}
+diff --git a/src/locales/es-419/sidebar.json b/src/locales/es-419/sidebar.json
+index 5e338ce..a46bc80 100644
+--- a/src/locales/es-419/sidebar.json
++++ b/src/locales/es-419/sidebar.json
+@@ -8,6 +8,7 @@
+       "save-quests": "Guardar Progreso (Misiones)",
+       "daily-quests": "Misiones Diarias",
+       "homebase-name": "Nombre de la Base",
++      "homebase": "Resumen de la Homebase",
+       "inventory": "Inventario",
+       "schematics": "Esquemas",
+       "xp-boosts": "Potenciadores",
+diff --git a/src/locales/es-419/stw-operations/homebase.json b/src/locales/es-419/stw-operations/homebase.json
+new file mode 100644
+index 0000000..d74d27f
+--- /dev/null
++++ b/src/locales/es-419/stw-operations/homebase.json
+@@ -0,0 +1,12 @@
++{
++  "no-account": "Selecciona una cuenta para ver su Homebase.",
++  "reload": "Recargar",
++  "load-failed": "No se pudo cargar la Homebase",
++  "locked": "Aún no has desbloqueado el Escudo Antitormentas de esta zona.",
++  "storm-shield-level": "Nivel del Escudo Antitormentas",
++  "endurance-wave": "Oleada máxima de Resistencia",
++  "amplifiers": "Amplificadores colocados",
++  "edit-permissions": "Permisos de edición ({{count}})",
++  "no-edit-permissions": "Nadie más puede editar esta base.",
++  "unknown-account": "Cuenta desconocida"
++}
+diff --git a/src/locales/resources.ts b/src/locales/resources.ts
+index 0420432..60aed1d 100644
+--- a/src/locales/resources.ts
++++ b/src/locales/resources.ts
+@@ -12,6 +12,7 @@ import enUS_zones from './en-US/zones.json'
+ import enUS_stwOperations_AutoKick from './en-US/stw-operations/auto-kick.json'
+ import enUS_stwOperations_TaxiService from './en-US/stw-operations/taxi-service.json'
+ import enUS_stwOperations_HomebaseName from './en-US/stw-operations/homebase-name.json'
++import enUS_stwOperations_Homebase from './en-US/stw-operations/homebase.json'
+ import enUS_stwOperations_Inventory from './en-US/stw-operations/inventory.json'
+ import enUS_stwOperations_Schematics from './en-US/stw-operations/schematics.json'
+ import enUS_stwOperations_SaveQuests from './en-US/stw-operations/save-quests.json'
+@@ -45,6 +46,7 @@ const enUS = {
+     'auto-kick': enUS_stwOperations_AutoKick,
+     'taxi-service': enUS_stwOperations_TaxiService,
+     'homebase-name': enUS_stwOperations_HomebaseName,
++    homebase: enUS_stwOperations_Homebase,
+     inventory: enUS_stwOperations_Inventory,
+     schematics: enUS_stwOperations_Schematics,
+     'save-quests': enUS_stwOperations_SaveQuests,
+@@ -87,6 +89,7 @@ import es419_zones from './es-419/zones.json'
+ import es419_stwOperations_AutoKick from './es-419/stw-operations/auto-kick.json'
+ import es419_stwOperations_TaxiService from './es-419/stw-operations/taxi-service.json'
+ import es419_stwOperations_HomebaseName from './es-419/stw-operations/homebase-name.json'
++import es419_stwOperations_Homebase from './es-419/stw-operations/homebase.json'
+ import es419_stwOperations_Inventory from './es-419/stw-operations/inventory.json'
+ import es419_stwOperations_Schematics from './es-419/stw-operations/schematics.json'
+ import es419_stwOperations_SaveQuests from './es-419/stw-operations/save-quests.json'
+@@ -120,6 +123,7 @@ const es419 = {
+     'auto-kick': es419_stwOperations_AutoKick,
+     'taxi-service': es419_stwOperations_TaxiService,
+     'homebase-name': es419_stwOperations_HomebaseName,
++    homebase: es419_stwOperations_Homebase,
+     inventory: es419_stwOperations_Inventory,
+     schematics: es419_stwOperations_Schematics,
+     'save-quests': es419_stwOperations_SaveQuests,
+diff --git a/src/routeTree.gen.ts b/src/routeTree.gen.ts
+index c9e13fd..dc6e214 100644
+--- a/src/routeTree.gen.ts
++++ b/src/routeTree.gen.ts
+@@ -22,6 +22,7 @@ import { Route as StwOperationsSaveQuestsRouteImport } from './routes/stw-operat
+ import { Route as StwOperationsPartyRouteImport } from './routes/stw-operations/party/route'
+ import { Route as StwOperationsInventoryRouteImport } from './routes/stw-operations/inventory/route'
+ import { Route as StwOperationsHomebaseNameRouteImport } from './routes/stw-operations/homebase-name/route'
++import { Route as StwOperationsHomebaseRouteImport } from './routes/stw-operations/homebase/route'
+ import { Route as StwOperationsDailyQuestsRouteImport } from './routes/stw-operations/daily-quests/route'
+ import { Route as StwOperationsAutomationRouteImport } from './routes/stw-operations/automation/route'
+ import { Route as StwOperationsAutoLlamasRouteImport } from './routes/stw-operations/auto-llamas/route'
+@@ -100,6 +101,13 @@ const StwOperationsHomebaseNameRouteRoute =
+     getParentRoute: () => rootRoute,
+   } as any)
+ 
++const StwOperationsHomebaseRouteRoute = StwOperationsHomebaseRouteImport.update(
++  {
++    path: '/stw-operations/homebase',
++    getParentRoute: () => rootRoute,
++  } as any,
++)
++
+ const StwOperationsDailyQuestsRouteRoute =
+   StwOperationsDailyQuestsRouteImport.update({
+     path: '/stw-operations/daily-quests',
+@@ -237,6 +245,10 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof StwOperationsDailyQuestsRouteImport
+       parentRoute: typeof rootRoute
+     }
++    '/stw-operations/homebase': {
++      preLoaderRoute: typeof StwOperationsHomebaseRouteImport
++      parentRoute: typeof rootRoute
++    }
+     '/stw-operations/homebase-name': {
+       preLoaderRoute: typeof StwOperationsHomebaseNameRouteImport
+       parentRoute: typeof rootRoute
+@@ -297,6 +309,7 @@ export const routeTree = rootRoute.addChildren([
+   StwOperationsAutoLlamasRouteRoute,
+   StwOperationsAutomationRouteRoute,
+   StwOperationsDailyQuestsRouteRoute,
++  StwOperationsHomebaseRouteRoute,
+   StwOperationsHomebaseNameRouteRoute,
+   StwOperationsInventoryRouteRoute,
+   StwOperationsPartyRouteRoute,
+diff --git a/src/routes/settings/-customizable-menu/-index.tsx b/src/routes/settings/-customizable-menu/-index.tsx
+index 371b954..8d4a3d8 100644
+--- a/src/routes/settings/-customizable-menu/-index.tsx
++++ b/src/routes/settings/-customizable-menu/-index.tsx
+@@ -170,6 +170,19 @@ function STWOperationsSection() {
+             onCheckedChange={updateMenuOption('homebaseName')}
+           />
+         </div>
++        <div className="item">
++          <Label
++            className="title"
++            htmlFor="homebase"
++          >
++            {t('stw-operations.options.homebase')}
++          </Label>
++          <Switch
++            id="homebase"
++            checked={getMenuOptionVisibility('homebase')}
++            onCheckedChange={updateMenuOption('homebase')}
++          />
++        </div>
+         <div className="item">
+           <Label
+             className="title"
+diff --git a/src/routes/stw-operations/homebase/-hooks.ts b/src/routes/stw-operations/homebase/-hooks.ts
+new file mode 100644
+index 0000000..635fb58
+--- /dev/null
++++ b/src/routes/stw-operations/homebase/-hooks.ts
+@@ -0,0 +1,69 @@
++import type { HomebaseOverview, HomebaseZoneId } from '../../../types/homebase'
++
++import { useEffect, useRef, useState } from 'react'
++
++import { homebaseZoneIds } from '../../../config/constants/homebase'
++
++import { useGetSelectedAccount } from '../../../hooks/accounts'
++
++export function useHomebaseData() {
++  const { selected } = useGetSelectedAccount()
++
++  const [overview, setOverview] = useState<HomebaseOverview | null>(null)
++  const [isLoading, setIsLoading] = useState(false)
++  const [zoneId, setZoneId] = useState<HomebaseZoneId>(homebaseZoneIds[0])
++  const requestId = useRef(0)
++
++  const loadOverview = () => {
++    if (!selected) {
++      setOverview(null)
++
++      return
++    }
++
++    const currentRequest = ++requestId.current
++
++    setIsLoading(true)
++
++    window.electronAPI
++      .getHomebaseOverview(selected)
++      .then((response) => {
++        if (currentRequest === requestId.current) {
++          setOverview(response)
++        }
++      })
++      .catch((error: Error) => {
++        if (currentRequest === requestId.current) {
++          setOverview({
++            success: false,
++            error: error?.message,
++            zones: [],
++          })
++        }
++      })
++      .finally(() => {
++        if (currentRequest === requestId.current) {
++          setIsLoading(false)
++        }
++      })
++  }
++
++  useEffect(() => {
++    setOverview(null)
++    setZoneId(homebaseZoneIds[0])
++    loadOverview()
++  }, [selected?.accountId])
++
++  const zone = overview?.zones.find((item) => item.zoneId === zoneId) ?? null
++
++  return {
++    isLoading,
++    overview,
++    selected,
++    zone,
++    zoneId,
++
++    loadOverview,
++    setZoneId,
++  }
++}
+diff --git a/src/routes/stw-operations/homebase/route.tsx b/src/routes/stw-operations/homebase/route.tsx
+new file mode 100644
+index 0000000..f9562b2
+--- /dev/null
++++ b/src/routes/stw-operations/homebase/route.tsx
+@@ -0,0 +1,285 @@
++import type { HomebaseZone, HomebaseZoneId } from '../../../types/homebase'
++
++import { UpdateIcon } from '@radix-ui/react-icons'
++import { createRoute } from '@tanstack/react-router'
++import { useTranslation } from 'react-i18next'
++
++import {
++  zoneColors,
++  zoneLetters,
++} from '../../../config/constants/fortnite/world-info'
++import {
++  homebaseMaxEnduranceWave,
++  homebaseMaxLevel,
++  homebaseZoneIds,
++  homebaseZoneWorld,
++} from '../../../config/constants/homebase'
++
++import { Route as RootRoute } from '../../__root'
++
++import { HomeBreadcrumb } from '../../../components/navigations/breadcrumb/home'
++import {
++  Breadcrumb,
++  BreadcrumbItem,
++  BreadcrumbList,
++  BreadcrumbPage,
++  BreadcrumbSeparator,
++} from '../../../components/ui/breadcrumb'
++import { Button } from '../../../components/ui/button'
++import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs'
++
++import { useHomebaseData } from './-hooks'
++
++import { cn } from '../../../lib/utils'
++
++export const Route = createRoute({
++  getParentRoute: () => RootRoute,
++  path: '/stw-operations/homebase',
++  component: () => {
++    const { t } = useTranslation(['sidebar'])
++
++    return (
++      <>
++        <Breadcrumb>
++          <BreadcrumbList>
++            <HomeBreadcrumb />
++            <BreadcrumbSeparator />
++            <BreadcrumbItem>
++              <BreadcrumbPage>{t('stw-operations.title')}</BreadcrumbPage>
++            </BreadcrumbItem>
++            <BreadcrumbSeparator />
++            <BreadcrumbItem>
++              <BreadcrumbPage>
++                {t('stw-operations.options.homebase')}
++              </BreadcrumbPage>
++            </BreadcrumbItem>
++          </BreadcrumbList>
++        </Breadcrumb>
++
++        <Content />
++      </>
++    )
++  },
++})
++
++function Content() {
++  const { t } = useTranslation(['stw-operations', 'zones'])
++
++  const { isLoading, overview, selected, zone, zoneId, loadOverview, setZoneId } =
++    useHomebaseData()
++
++  if (!selected) {
++    return (
++      <div className="flex flex-grow items-center justify-center text-muted-foreground">
++        {t('homebase.no-account')}
++      </div>
++    )
++  }
++
++  return (
++    <div className="flex flex-col flex-grow gap-4">
++      <div className="flex flex-wrap items-center gap-3">
++        <Tabs
++          value={zoneId}
++          onValueChange={(value) => setZoneId(value as HomebaseZoneId)}
++        >
++          <TabsList>
++            {homebaseZoneIds.map((id) => {
++              const world = homebaseZoneWorld[id]
++              const unlocked =
++                overview?.zones.find((item) => item.zoneId === id)?.unlocked ??
++                false
++
++              return (
++                <TabsTrigger
++                  key={id}
++                  value={id}
++                  className={cn('gap-2', {
++                    'opacity-50': overview?.success && !unlocked,
++                  })}
++                >
++                  <ZoneLetter
++                    color={zoneColors[world]}
++                    letter={zoneLetters[world]}
++                  />
++                  {t(world, { ns: 'zones' })}
++                </TabsTrigger>
++              )
++            })}
++          </TabsList>
++        </Tabs>
++        <Button
++          size="icon"
++          variant="outline"
++          onClick={loadOverview}
++          disabled={isLoading}
++          title={t('homebase.reload')}
++        >
++          <UpdateIcon className={cn({ 'animate-spin': isLoading })} />
++        </Button>
++      </div>
++
++      {overview && !overview.success ? (
++        <div className="border-l-4 border-red-400 ml-2 pl-2 text-red-400">
++          {t('homebase.load-failed')}: {overview.error}
++        </div>
++      ) : !overview || !zone ? (
++        <div className="flex flex-grow items-center justify-center">
++          <UpdateIcon className="animate-spin size-6" />
++        </div>
++      ) : (
++        <ZonePanel
++          zone={zone}
++          className={cn({ 'opacity-60': isLoading })}
++        />
++      )}
++    </div>
++  )
++}
++
++function ZonePanel({
++  className,
++  zone,
++}: {
++  className?: string
++  zone: HomebaseZone
++}) {
++  const { t } = useTranslation(['stw-operations', 'zones'])
++  const world = homebaseZoneWorld[zone.zoneId]
++
++  return (
++    <div
++      className={cn(
++        'flex flex-col gap-5 rounded-md border p-4 max-w-2xl',
++        className
++      )}
++    >
++      <div className="flex items-center gap-3">
++        <ZoneLetter
++          color={zoneColors[world]}
++          letter={zoneLetters[world]}
++          className="size-8 text-base"
++        />
++        <div>
++          <h2 className="text-lg font-semibold leading-tight">
++            {t(world, { ns: 'zones' })}
++          </h2>
++          <span className="text-xs text-muted-foreground">{zone.zoneId}</span>
++        </div>
++      </div>
++
++      {!zone.unlocked ? (
++        <p className="text-muted-foreground">{t('homebase.locked')}</p>
++      ) : (
++        <>
++          <Meter
++            label={t('homebase.storm-shield-level')}
++            value={zone.level}
++            max={homebaseMaxLevel}
++          />
++          <Meter
++            label={t('homebase.endurance-wave')}
++            value={zone.highestEnduranceWave}
++            max={homebaseMaxEnduranceWave}
++          />
++          <div className="flex items-center justify-between gap-3">
++            <span className="text-sm text-muted-foreground">
++              {t('homebase.amplifiers')}
++            </span>
++            <span className="font-semibold">{zone.amplifierCount}</span>
++          </div>
++
++          <div className="flex flex-col gap-2">
++            <h3 className="text-sm font-semibold">
++              {t('homebase.edit-permissions', {
++                count: zone.editPermissions.length,
++              })}
++            </h3>
++            {zone.editPermissions.length === 0 ? (
++              <p className="text-sm text-muted-foreground">
++                {t('homebase.no-edit-permissions')}
++              </p>
++            ) : (
++              <ul className="flex flex-col gap-1">
++                {zone.editPermissions.map((permission) => (
++                  <li
++                    key={permission.accountId}
++                    className="flex flex-wrap items-baseline justify-between gap-x-3 rounded bg-muted/50 px-2 py-1"
++                  >
++                    <span
++                      className={cn('text-sm', {
++                        'text-muted-foreground italic':
++                          !permission.displayName,
++                      })}
++                    >
++                      {permission.displayName ?? t('homebase.unknown-account')}
++                    </span>
++                    <span className="text-xs font-mono text-muted-foreground select-text">
++                      {permission.accountId}
++                    </span>
++                  </li>
++                ))}
++              </ul>
++            )}
++          </div>
++        </>
++      )}
++    </div>
++  )
++}
++
++function Meter({
++  label,
++  max,
++  value,
++}: {
++  label: string
++  max: number
++  value: number | null
++}) {
++  const filled = Math.min(Math.max(value ?? 0, 0), max)
++
++  return (
++    <div className="flex flex-col gap-1.5">
++      <div className="flex items-center justify-between gap-3">
++        <span className="text-sm text-muted-foreground">{label}</span>
++        <span className="font-semibold">
++          {value ?? '—'} / {max}
++        </span>
++      </div>
++      <div className="flex gap-0.5">
++        {Array.from({ length: max }, (_, index) => (
++          <span
++            key={index}
++            className={cn('h-2.5 flex-1 rounded-sm', {
++              'bg-primary': index < filled,
++              'bg-muted': index >= filled,
++            })}
++          />
++        ))}
++      </div>
++    </div>
++  )
++}
++
++function ZoneLetter({
++  className,
++  color,
++  letter,
++}: {
++  className?: string
++  color?: string
++  letter?: string
++}) {
++  return (
++    <span
++      className={cn(
++        'flex size-5 shrink-0 items-center justify-center rounded text-xs font-bold text-white',
++        className
++      )}
++      style={{ backgroundColor: color }}
++    >
++      {letter}
++    </span>
++  )
++}
+diff --git a/src/services/endpoints/lookup.ts b/src/services/endpoints/lookup.ts
+index 2ae5082..027997e 100644
+--- a/src/services/endpoints/lookup.ts
++++ b/src/services/endpoints/lookup.ts
+@@ -22,6 +22,29 @@ export function findUserByAccountId({
+   )
+ }
+ 
++export function findUsersByAccountIds({
++  accessToken,
++  accountIds,
++}: {
++  accessToken: string
++  accountIds: Array<string>
++}) {
++  return publicAccountService.get<Array<LookupFindOneByDisplayNameResponse>>(
++    '',
++    {
++      headers: {
++        Authorization: `bearer ${accessToken}`,
++      },
++      params: {
++        accountId: accountIds,
++      },
++      paramsSerializer: {
++        indexes: null,
++      },
++    }
++  )
++}
++
+ export function findUserByDisplayName({
+   accessToken,
+   displayName,
+diff --git a/src/services/endpoints/mcp.ts b/src/services/endpoints/mcp.ts
+index 7d9be4d..0c0a638 100644
+--- a/src/services/endpoints/mcp.ts
++++ b/src/services/endpoints/mcp.ts
+@@ -13,6 +13,7 @@ import type {
+ import type { InventoryProfileId } from '../../types/inventory'
+ import type { SchematicsProfileId } from '../../types/schematics'
+ import type { MCPHomebaseNameResponse } from '../../types/services/mcp/homebase-name'
++import type { MCPQueryProfileMetadata } from '../../types/services/mcp/metadata-profile'
+ import type {
+   MCPActivateConsumableResponse,
+   MCPClientQuestLoginResponse,
+@@ -116,6 +117,28 @@ export function getQueryProfileInventory({
+   )
+ }
+ 
++export function getQueryProfileMetadata({
++  accessToken,
++  accountId,
++}: {
++  accessToken: string
++  accountId: string
++}) {
++  return baseGameService.post<MCPQueryProfileMetadata>(
++    `/profile/${accountId}/client/QueryProfile`,
++    {},
++    {
++      headers: {
++        Authorization: `bearer ${accessToken}`,
++      },
++      params: {
++        profileId: 'metadata',
++        rvn: -1,
++      },
++    }
++  )
++}
++
+ export function getQueryPublicProfile({
+   accessToken,
+   accountId,
+diff --git a/src/state/settings/customizable-menu.ts b/src/state/settings/customizable-menu.ts
+index 3cf3d53..13782a5 100644
+--- a/src/state/settings/customizable-menu.ts
++++ b/src/state/settings/customizable-menu.ts
+@@ -40,6 +40,7 @@ export const customizableMenuSettingsRelations: Record<
+     'saveQuests',
+     'dailyQuests',
+     'homebaseName',
++    'homebase',
+     'inventory',
+     'schematics',
+     'xpBoosts',
+diff --git a/src/types/homebase.d.ts b/src/types/homebase.d.ts
+new file mode 100644
+index 0000000..189d4ac
+--- /dev/null
++++ b/src/types/homebase.d.ts
+@@ -0,0 +1,22 @@
++export type HomebaseZoneId = 'pve_01' | 'pve_02' | 'pve_03' | 'pve_04'
++
++export type HomebaseEditPermission = {
++  accountId: string
++  displayName: string | null
++}
++
++export type HomebaseZone = {
++  zoneId: HomebaseZoneId
++  unlocked: boolean
++  level: number | null
++  highestEnduranceWave: number
++  amplifierCount: number
++  editPermissions: Array<HomebaseEditPermission>
++  saveFile: string | null
++}
++
++export type HomebaseOverview = {
++  success: boolean
++  error?: string
++  zones: Array<HomebaseZone>
++}
+diff --git a/src/types/services/mcp/metadata-profile.d.ts b/src/types/services/mcp/metadata-profile.d.ts
+new file mode 100644
+index 0000000..e40938f
+--- /dev/null
++++ b/src/types/services/mcp/metadata-profile.d.ts
+@@ -0,0 +1,40 @@
++export type MCPQueryProfileMetadata = {
++  profileRevision: number
++  profileId: 'metadata'
++  profileChangesBaseRevision: number
++  profileChanges?: Array<{
++    changeType: string
++    profile?: {
++      accountId: string
++      profileId: 'metadata'
++      items?: Record<string, MCPMetadataProfileItem>
++    }
++  }>
++  profileCommandRevision: number
++  serverTime: string
++  responseVersion: number
++}
++
++export type MCPMetadataProfileItem = {
++  templateId: string
++  quantity?: number
++  attributes?: {
++    level?: number
++    cloud_save_info?: {
++      saveCount?: number
++      savedRecords?: Array<{
++        recordFilename?: string
++        recordIndex?: number
++        archiveNumber?: number
++      }>
++    }
++    outpost_core_info?: {
++      accountsWithEditPermission?: Array<string>
++      highestEnduranceWaveReached?: number
++      placedBuildings?: Array<{
++        buildingTag?: string
++        placedTag?: string
++      }>
++    }
++  }
++}
+-- 
+2.43.0
+

@@ -1,6 +1,6 @@
 # SPEC — Visor de Homebase (Escudo Antitormentas) de Salvar el Mundo
 
-Estado: v1 · Fase 1 · Alcance: solo lectura (no modifica el perfil del
+Estado: v1 · **Descartado** (fase 1 implementada y guardada, §10) · Alcance: solo lectura (no modifica el perfil del
 jugador).
 
 Este documento describe **comportamiento**, no código. Parte de
@@ -258,3 +258,36 @@ Casos sintéticos:
 
 No hacen falta datos del juego nuevos: nombres y colores de zona ya están en
 Aerial (`zones.json`, `world-info.ts`).
+
+## 10. Estado: descartado, implementación guardada
+
+[DECISIÓN del usuario] La función se descartó después de implementar y
+verificar la fase 1, y la rama de código se borró. La implementación
+completa está guardada en `homebase/phase1-implementation.patch`, generado
+con `git format-patch` sobre `main` en `96a46d8` ("Add Save the World
+schematics catalog").
+
+Lo que se verificó antes de descartarla:
+
+- `npm test`: 51 tests pasan, 9 de ellos de `homebase.test.ts`.
+- `npm run lint`: limpio.
+- `tsc`: 410 errores, igual que la base, ninguno en archivos nuevos.
+- `npx electron-forge package`: compila los tres bundles.
+- Capturas en el preview con datos de ejemplo, en `en-US` y `es-419`.
+
+**No se llegó a probar con una cuenta real.** Lo primero que hay que
+comprobar en el juego es el número de amplificadores (§3.3).
+
+**Cómo retomarla:**
+
+```
+git fetch origin main
+git checkout -b <rama nueva> origin/main
+git am docs/features/homebase/phase1-implementation.patch   # desde una copia de notes/features
+```
+
+Si `main` ha avanzado y el parche no aplica limpio, usa
+`git am -3`. Los conflictos más probables están en los archivos que
+comparten todas las páginas: `routeTree.gen.ts`, `sidebar.tsx`,
+`resources.ts`, el menú personalizable, `main.ts` y `preload.ts`.
+Después, repite la verificación de la §6 de la guía.
