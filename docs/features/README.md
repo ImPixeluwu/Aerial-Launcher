@@ -46,7 +46,7 @@ función se desarrolla en su propia sesión; empieza leyendo esto y luego el
 |---|---|---|
 | Visor de inventario | Hecho; PR ImPixeluwu/Aerial-Launcher#3 (squash). Pendiente: virtualizar la cuadrícula (`inventory/SPEC.md` §12) | `inventory/SPEC.md` |
 | Catálogo de esquemas | Hecho (solo lectura); PR ImPixeluwu/Aerial-Launcher#4 (squash) | `schematics/SPEC.md`, `schematics/NOTES.md` |
-| Visor de Homebase | Pendiente | `homebase/NOTES.md` |
+| Visor de Homebase | Fase 1 (información de zona) en curso; fases 2 y 3 pendientes | `homebase/SPEC.md`, `homebase/NOTES.md` |
 | Libro de colección | Descartado: el catálogo de esquemas ya incluye el libro (filtro de origen) | `collection-book/NOTES.md` (solo referencia) |
 | Amigos y grupo | Implementado en `claude/jolly-pasteur-ahvp63`; pendiente de prueba del usuario y PR. `partyKick`/`partyLeave` siguen en `false` (`friends-party/SPEC.md` §7) | `friends-party/SPEC.md`, `friends-party/NOTES.md` |
 
