@@ -1,8 +1,6 @@
 {
   "no-account": "Select an account to view its schematics.",
   "reload": "Reload",
-  "subtitle": "Weapon and trap schematics from your campaign profile and your collection book.",
-  "english-note": "Item and perk names are shown in English, as in the game data.",
   "filter": {
     "source": "Source",
     "category": "Category",

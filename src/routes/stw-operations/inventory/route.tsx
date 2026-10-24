@@ -9,6 +9,7 @@ import { raritiesColor } from "../../../config/constants/resources";
 
 import { Route as RootRoute } from "../../__root";
 
+import { GoToTop } from "../../../components/go-to-top";
 import { HomeBreadcrumb } from "../../../components/navigations/breadcrumb/home";
 import {
   Breadcrumb,
@@ -127,7 +128,7 @@ function Content() {
 
   return (
     <div className="flex flex-col flex-grow gap-4">
-      <div className="flex flex-wrap items-center gap-3">
+      <div id="inventory-toolbar" className="flex flex-wrap items-center gap-3">
         <Select
           value={profileId}
           onValueChange={(value) => setProfileId(value as typeof profileId)}
@@ -248,6 +249,8 @@ function Content() {
           ))}
         </div>
       )}
+
+      <GoToTop containerId="inventory-toolbar" />
 
       <ItemDetail
         item={selectedItem}

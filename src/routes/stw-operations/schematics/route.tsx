@@ -28,6 +28,7 @@ import {
 
 import { Route as RootRoute } from '../../__root'
 
+import { GoToTop } from '../../../components/go-to-top'
 import { HomeBreadcrumb } from '../../../components/navigations/breadcrumb/home'
 import {
   ItemDetailDialog,
@@ -158,12 +159,10 @@ function Content() {
 
   return (
     <div className="flex flex-col flex-grow gap-4">
-      <div className="flex flex-col gap-0.5 text-muted-foreground">
-        <p className="text-sm">{t('schematics.subtitle')}</p>
-        <p className="text-xs">{t('schematics.english-note')}</p>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
+      <div
+        id="schematics-toolbar"
+        className="flex flex-wrap items-center gap-3"
+      >
         <div className="relative flex-grow min-w-48">
           <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
@@ -356,6 +355,8 @@ function Content() {
           onSelect={setSelectedItemKey}
         />
       )}
+
+      <GoToTop containerId="schematics-toolbar" />
 
       <SchematicDetail
         item={selectedItem}
