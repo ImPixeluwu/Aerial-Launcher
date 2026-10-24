@@ -42,6 +42,16 @@
     "ingredients": "Ingredientes",
     "building-mats": "Materiales de construcción"
   },
+  "sort": {
+    "label": "Ordenar por",
+    "power": "Poder",
+    "level": "Nivel",
+    "name": "Nombre",
+    "rarity": "Rareza",
+    "quantity": "Cantidad",
+    "asc": "Ascendente",
+    "desc": "Descendente"
+  },
   "rarity": {
     "c": "Común",
     "uc": "Poco común",

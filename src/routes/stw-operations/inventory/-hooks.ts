@@ -9,7 +9,15 @@ import type {
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useDebounce } from '@uidotdev/usehooks'
 
-import { inventoryTypesByGroup } from '../../../config/constants/inventory'
+import type {
+  StwSortDirection,
+  StwSortField,
+} from '../../../lib/parsers/item-sort'
+
+import {
+  inventoryDefaultSortField,
+  inventoryTypesByGroup,
+} from '../../../config/constants/inventory'
 
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 
@@ -17,6 +25,10 @@ import {
   countInventoryItems,
   filterInventoryItems,
 } from '../../../lib/parsers/inventory-list'
+import {
+  sortStwItems,
+  stwDefaultSortDirections,
+} from '../../../lib/parsers/item-sort'
 
 export function useInventoryData() {
   const { selected } = useGetSelectedAccount()
@@ -28,6 +40,12 @@ export function useInventoryData() {
   const [types, setTypes] = useState<Array<InventoryItemType>>([])
   const [rarities, setRarities] = useState<Array<RarityType>>([])
   const [searchValue, setSearchValue] = useState('')
+  const [sortField, setSortFieldState] = useState<StwSortField>(
+    inventoryDefaultSortField,
+  )
+  const [sortDirection, setSortDirection] = useState<StwSortDirection>(
+    stwDefaultSortDirections[inventoryDefaultSortField],
+  )
   const [selectedItemKey, setSelectedItemKey] = useState<string | null>(null)
   const requestId = useRef(0)
 
@@ -39,6 +57,16 @@ export function useInventoryData() {
 
     setGroupsState(value)
     setTypes((current) => current.filter((type) => allowedTypes.includes(type)))
+  }
+
+  // Each field starts in its natural direction
+  const setSortField = (value: StwSortField) => {
+    setSortFieldState(value)
+    setSortDirection(stwDefaultSortDirections[value])
+  }
+
+  const toggleSortDirection = () => {
+    setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'))
   }
 
   const resetFilters = () => {
@@ -102,13 +130,25 @@ export function useInventoryData() {
 
   const filteredItems = useMemo(
     () =>
-      filterInventoryItems(overview?.items ?? [], {
-        groups,
-        types,
-        rarities,
-        search: debouncedSearchValue,
-      }),
-    [overview, groups, types, rarities, debouncedSearchValue],
+      sortStwItems(
+        filterInventoryItems(overview?.items ?? [], {
+          groups,
+          types,
+          rarities,
+          search: debouncedSearchValue,
+        }),
+        sortField,
+        sortDirection,
+      ),
+    [
+      overview,
+      groups,
+      types,
+      rarities,
+      debouncedSearchValue,
+      sortField,
+      sortDirection,
+    ],
   )
   const counts = useMemo(
     () => countInventoryItems(overview?.items ?? []),
@@ -139,6 +179,8 @@ export function useInventoryData() {
     searchValue,
     selected,
     selectedItem,
+    sortDirection,
+    sortField,
     types,
 
     loadOverview,
@@ -148,6 +190,8 @@ export function useInventoryData() {
     setRarities,
     setSearchValue,
     setSelectedItemKey,
+    setSortField,
     setTypes,
+    toggleSortDirection,
   }
 }

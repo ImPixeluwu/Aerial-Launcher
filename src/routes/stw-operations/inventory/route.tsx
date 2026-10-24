@@ -4,7 +4,12 @@ import { memo } from "react";
 
 import { createRoute } from "@tanstack/react-router";
 import { UpdateIcon } from "@radix-ui/react-icons";
-import { Search, X } from "lucide-react";
+import {
+  ArrowDownWideNarrow,
+  ArrowUpNarrowWide,
+  Search,
+  X,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { raritiesColor } from "../../../config/constants/resources";
@@ -53,6 +58,7 @@ import {
   inventoryGroups,
   inventoryProfileIds,
   inventoryRarityOrder,
+  inventorySortFields,
   inventoryTypesByGroup,
 } from "../../../config/constants/inventory";
 import { cn } from "../../../lib/utils";
@@ -103,6 +109,8 @@ function Content() {
     searchValue,
     selected,
     selectedItem,
+    sortDirection,
+    sortField,
     types,
 
     loadOverview,
@@ -112,7 +120,9 @@ function Content() {
     setRarities,
     setSearchValue,
     setSelectedItemKey,
+    setSortField,
     setTypes,
+    toggleSortDirection,
   } = useInventoryData();
 
   if (!selected) {
@@ -137,6 +147,7 @@ function Content() {
   const availableTypes = groups
     .flatMap((group) => inventoryTypesByGroup[group])
     .filter((type) => (counts.typeCounts[type] ?? 0) > 0);
+  const sortDirectionLabel = t(`inventory.sort.${sortDirection}`);
   const availableRarities = inventoryRarityOrder.filter(
     (rarity) => (overview?.rarityCounts[rarity] ?? 0) > 0,
   );
@@ -170,6 +181,38 @@ function Content() {
             ))}
           </SelectContent>
         </Select>
+        <Select
+          value={sortField}
+          onValueChange={(value) => setSortField(value as typeof sortField)}
+        >
+          <SelectTrigger
+            className="w-40"
+            aria-label={t("inventory.sort.label")}
+            title={t("inventory.sort.label")}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {inventorySortFields.map((field) => (
+              <SelectItem key={field} value={field}>
+                {t(`inventory.sort.${field}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={toggleSortDirection}
+          aria-label={sortDirectionLabel}
+          title={sortDirectionLabel}
+        >
+          {sortDirection === "desc" ? (
+            <ArrowDownWideNarrow className="size-4" />
+          ) : (
+            <ArrowUpNarrowWide className="size-4" />
+          )}
+        </Button>
         <Button
           size="icon"
           variant="outline"

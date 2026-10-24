@@ -6,7 +6,7 @@ import type {
   SchematicSource,
 } from '../../types/schematics'
 
-import { RarityType } from './resources'
+import { stwDefaultSortDirections } from '../../lib/parsers/item-sort'
 
 export const schematicSources: Array<SchematicSource> = [
   'campaign',
@@ -47,27 +47,10 @@ export const schematicSortFields: Array<SchematicSortField> = [
 
 export const schematicDefaultSortField: SchematicSortField = 'power'
 
-/**
- * Highest first, except names, which go from A to Z.
- */
 export const schematicDefaultSortDirections: Record<
   SchematicSortField,
   SchematicSortDirection
-> = {
-  power: 'desc',
-  level: 'desc',
-  name: 'asc',
-  rarity: 'desc',
-}
-
-export const schematicRarityRank: Record<RarityType, number> = {
-  [RarityType.Common]: 1,
-  [RarityType.Uncommon]: 2,
-  [RarityType.Rare]: 3,
-  [RarityType.Epic]: 4,
-  [RarityType.Legendary]: 5,
-  [RarityType.Mythic]: 6,
-}
+> = stwDefaultSortDirections
 
 /**
  * Overviews are reused for this long when coming back to the page.

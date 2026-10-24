@@ -6,7 +6,7 @@ import type {
   SchematicsOverview,
 } from '../../types/schematics'
 
-import { schematicRarityRank } from '../../config/constants/schematics'
+import { sortStwItems } from './item-sort'
 
 /*
  * Catalog helpers shared with the renderer. Keep this file free of game
@@ -67,54 +67,10 @@ export function filterSchematics(
   })
 }
 
-type Comparator = (itemA: SchematicItem, itemB: SchematicItem) => number
-
-const byPower: Comparator = (itemA, itemB) =>
-  (itemA.powerLevel ?? 0) - (itemB.powerLevel ?? 0)
-const byLevel: Comparator = (itemA, itemB) =>
-  (itemA.level ?? 0) - (itemB.level ?? 0)
-const byRarity: Comparator = (itemA, itemB) =>
-  (itemA.rarity ? schematicRarityRank[itemA.rarity] : 0) -
-  (itemB.rarity ? schematicRarityRank[itemB.rarity] : 0)
-const byName: Comparator = (itemA, itemB) =>
-  itemA.name.localeCompare(itemB.name, undefined, { sensitivity: 'base' })
-
-function descending(comparator: Comparator): Comparator {
-  return (itemA, itemB) => comparator(itemB, itemA)
-}
-
-/**
- * The field picks the main order; ties always fall back to the highest
- * values first, then the name.
- */
-const comparators: Record<SchematicSortField, Array<Comparator>> = {
-  power: [byPower, descending(byRarity), descending(byLevel)],
-  level: [byLevel, descending(byRarity), descending(byPower)],
-  rarity: [byRarity, descending(byPower), descending(byLevel)],
-  name: [byName],
-}
-
 export function sortSchematics(
   items: Array<SchematicItem>,
   field: SchematicSortField,
   direction: SchematicSortDirection,
 ) {
-  const [main, ...ties] = comparators[field]
-  const sortComparators = [
-    direction === 'desc' ? descending(main) : main,
-    ...ties,
-    byName,
-  ]
-
-  return items.toSorted((itemA, itemB) => {
-    for (const comparator of sortComparators) {
-      const result = comparator(itemA, itemB)
-
-      if (result !== 0) {
-        return result
-      }
-    }
-
-    return 0
-  })
+  return sortStwItems(items, field, direction)
 }

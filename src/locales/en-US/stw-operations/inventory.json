@@ -42,6 +42,16 @@
     "ingredients": "Ingredients",
     "building-mats": "Building mats"
   },
+  "sort": {
+    "label": "Sort by",
+    "power": "Power",
+    "level": "Level",
+    "name": "Name",
+    "rarity": "Rarity",
+    "quantity": "Quantity",
+    "asc": "Ascending",
+    "desc": "Descending"
+  },
   "rarity": {
     "c": "Common",
     "uc": "Uncommon",

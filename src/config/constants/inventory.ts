@@ -5,6 +5,8 @@ import type {
   InventoryProfileId,
 } from '../../types/inventory'
 
+import type { StwSortField } from '../../lib/parsers/item-sort'
+
 import { RarityType } from './resources'
 
 export const inventoryProfileIds: Array<InventoryProfileId> = [
@@ -47,6 +49,16 @@ export const inventoryTypesByGroup: Record<
   traps: ['trap_floor', 'trap_wall', 'trap_ceiling'],
   materials: ['ingredients', 'building-mats'],
 }
+
+export const inventorySortFields: Array<StwSortField> = [
+  'power',
+  'level',
+  'name',
+  'rarity',
+  'quantity',
+]
+
+export const inventoryDefaultSortField: StwSortField = 'power'
 
 export const inventoryRarityOrder: Array<RarityType> = [
   RarityType.Mythic,
