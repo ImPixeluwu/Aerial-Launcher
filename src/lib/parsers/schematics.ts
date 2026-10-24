@@ -33,6 +33,7 @@ import {
   findStwAlteration,
   findStwItem,
   resolveStwSchematic,
+  stwLevelBonus,
   stwMaxLevel,
 } from './stw-items'
 
@@ -149,12 +150,7 @@ function createSchematicItem(
     rarity,
     filterType,
   )
-  // Supercharged schematics go past the tier cap; if the profile does not
-  // say so with max_level_bonus, trust the level instead of capping it
-  const levelBonus =
-    tier && level !== null
-      ? Math.max(maxLevelBonus, level - stwMaxLevel(tier))
-      : maxLevelBonus
+  const levelBonus = stwLevelBonus({ level, maxLevelBonus, tier })
   const alterations = alterationIds.map(findStwAlteration)
   // Aerial ships the mythic vouchers with the "er" suffix
   const iconRarity =

@@ -26,6 +26,7 @@ import {
   calculateStwStats,
   findStwAlteration,
   findStwItem,
+  stwLevelBonus,
   stwMaxLevel,
 } from './stw-items'
 
@@ -343,6 +344,7 @@ export function parseInventoryProfile(
         : templateCategory
     const fallback = describeInventoryItem(category, id, rarity, filterType)
     const hasPowerLevel = category !== 'ingredients' && category !== 'materials'
+    const levelBonus = stwLevelBonus({ level, maxLevelBonus, tier })
 
     groups.set(itemKey, {
       itemKey,
@@ -356,9 +358,14 @@ export function parseInventoryProfile(
       tier,
       material: parseInventoryMaterial(id),
       level,
-      maxLevel: hasPowerLevel && tier ? stwMaxLevel(tier, maxLevelBonus) : null,
+      maxLevel: hasPowerLevel && tier ? stwMaxLevel(tier, levelBonus) : null,
       powerLevel: hasPowerLevel
-        ? calculateStwPowerLevel({ level, maxLevelBonus, rarity, tier })
+        ? calculateStwPowerLevel({
+            level,
+            maxLevelBonus: levelBonus,
+            rarity,
+            tier,
+          })
         : null,
       quantity,
       stacks: 1,
