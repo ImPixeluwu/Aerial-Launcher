@@ -81,9 +81,12 @@
     "level": "Level",
     "tier": "Tier",
     "material": "Material",
-    "template": "Template ID"
+    "template": "Template ID",
+    "supercharge": "Supercharge"
   },
   "level-of": "LV {{level}} / {{max}}",
+  "supercharged_one": "{{count}} supercharge",
+  "supercharged_other": "{{count}} supercharges",
   "stat": {
     "damage": "Damage",
     "impact": "Impact",

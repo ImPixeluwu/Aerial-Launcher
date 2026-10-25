@@ -9,7 +9,6 @@ import {
   ArrowUpNarrowWide,
   BookOpen,
   Search,
-  Star,
   X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -39,6 +38,7 @@ import {
 } from '../../../components/stw-items/item-detail-dialog'
 import {
   ItemImage,
+  ItemStars,
   PowerBadge,
   formatQuantity,
   rarityStyle,
@@ -386,33 +386,6 @@ function Content() {
 // Fixed card height: every row of the virtual grid has the same size
 const cardHeight = 156
 
-/**
- * Five stars: the first "tier" ones are lit and the first supercharges
- * are highlighted.
- */
-function SchematicStars({ item }: { item: SchematicItem }) {
-  const tier = Math.min(Math.max(item.tier ?? 1, 1), 5)
-  const supercharged = Math.min(item.superchargeLevel, tier)
-
-  return (
-    <span className="flex gap-0.5">
-      {Array.from({ length: 5 }, (_, index) => (
-        <Star
-          key={index}
-          className={cn(
-            'size-3',
-            index < supercharged
-              ? 'fill-current text-sky-400'
-              : index < tier
-                ? 'fill-current text-yellow-400'
-                : 'text-muted-foreground/40',
-          )}
-        />
-      ))}
-    </span>
-  )
-}
-
 const SchematicCard = memo(function SchematicCard({
   item,
   onSelect,
@@ -468,7 +441,10 @@ const SchematicCard = memo(function SchematicCard({
           </span>
         )}
       </div>
-      <SchematicStars item={item} />
+      <ItemStars
+        tier={item.tier}
+        superchargeLevel={item.superchargeLevel}
+      />
       {item.level !== null && (
         <span className="text-xs text-muted-foreground">
           {item.maxLevel !== null
@@ -510,7 +486,12 @@ function SchematicDetail({
       item.subType,
     ].filter((label): label is string => Boolean(label)),
     powerLevel: item.powerLevel,
-    stars: <SchematicStars item={item} />,
+    stars: (
+      <ItemStars
+        tier={item.tier}
+        superchargeLevel={item.superchargeLevel}
+      />
+    ),
     levelText:
       item.level === null
         ? null

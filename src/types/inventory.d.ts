@@ -90,6 +90,7 @@ export type InventoryItem = {
   material: 'ore' | 'crystal' | null
   level: number | null
   maxLevel: number | null
+  superchargeLevel: number
   powerLevel: number | null
   quantity: number
   stacks: number

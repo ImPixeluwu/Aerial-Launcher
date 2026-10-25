@@ -28,6 +28,7 @@ import {
   findStwItem,
   stwLevelBonus,
   stwMaxLevel,
+  stwSuperchargeLevel,
 } from './stw-items'
 
 const categoryByPrefix: Record<string, InventoryCategory> = {
@@ -359,6 +360,7 @@ export function parseInventoryProfile(
       material: parseInventoryMaterial(id),
       level,
       maxLevel: hasPowerLevel && tier ? stwMaxLevel(tier, levelBonus) : null,
+      superchargeLevel: hasPowerLevel ? stwSuperchargeLevel(level) : 0,
       powerLevel: hasPowerLevel
         ? calculateStwPowerLevel({
             level,

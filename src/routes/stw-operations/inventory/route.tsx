@@ -34,8 +34,8 @@ import {
 import { ItemDetailDialog } from "../../../components/stw-items/item-detail-dialog";
 import {
   ItemImage,
+  ItemStars,
   PowerBadge,
-  TierStars,
   formatQuantity,
   rarityStyle,
 } from "../../../components/stw-items/item-parts";
@@ -386,7 +386,9 @@ const ItemCard = memo(function ItemCard({
           />
         )}
       </div>
-      {item.tier !== null && <TierStars tier={item.tier} />}
+      {item.tier !== null && (
+        <ItemStars tier={item.tier} superchargeLevel={item.superchargeLevel} />
+      )}
       <span className="w-full text-center text-xs leading-tight line-clamp-2">
         {item.name}
       </span>
@@ -424,7 +426,12 @@ function ItemDetail({
             item.subType,
           ].filter((label): label is string => Boolean(label)),
           powerLevel: item.powerLevel,
-          stars: item.tier !== null && <TierStars tier={item.tier} />,
+          stars: item.tier !== null && (
+            <ItemStars
+              tier={item.tier}
+              superchargeLevel={item.superchargeLevel}
+            />
+          ),
           levelText:
             item.level === null
               ? null
@@ -442,6 +449,16 @@ function ItemDetail({
           rows: [
             [t("inventory.prop.quantity"), item.quantity.toLocaleString()],
             [t("inventory.prop.stacks"), String(item.stacks)],
+            ...(item.superchargeLevel > 0
+              ? [
+                  [
+                    t("inventory.prop.supercharge"),
+                    t("inventory.supercharged", {
+                      count: item.superchargeLevel,
+                    }),
+                  ] as [string, string],
+                ]
+              : []),
             [
               t("inventory.prop.material"),
               item.material ? t(`inventory.material.${item.material}`) : "—",

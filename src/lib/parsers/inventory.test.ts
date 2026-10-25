@@ -372,7 +372,12 @@ describe('calculateStwPowerLevel', () => {
       }),
     }).items
 
-    expect(weapon).toMatchObject({ level: 60, maxLevel: 60, powerLevel: 144 })
+    expect(weapon).toMatchObject({
+      level: 60,
+      maxLevel: 60,
+      powerLevel: 144,
+      superchargeLevel: 5,
+    })
   })
 
   it('caps the level at the tier maximum plus bonus levels', () => {

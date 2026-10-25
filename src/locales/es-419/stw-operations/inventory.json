@@ -81,9 +81,12 @@
     "level": "Nivel",
     "tier": "Tier",
     "material": "Material",
-    "template": "ID de plantilla"
+    "template": "ID de plantilla",
+    "supercharge": "Supercarga"
   },
   "level-of": "NV {{level}} / {{max}}",
+  "supercharged_one": "{{count}} supercarga",
+  "supercharged_other": "{{count}} supercargas",
   "stat": {
     "damage": "Daño",
     "impact": "Impacto",
