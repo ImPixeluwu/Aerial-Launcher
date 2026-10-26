@@ -44,7 +44,7 @@ función se desarrolla en su propia sesión; empieza leyendo esto y luego el
 
 | Función | Estado | Documentos |
 |---|---|---|
-| Visor de inventario | Hecho; PR ImPixeluwu/Aerial-Launcher#3 (squash). Pendiente: virtualizar la cuadrícula (`inventory/SPEC.md` §12) | `inventory/SPEC.md` |
+| Visor de inventario | Hecho; PR ImPixeluwu/Aerial-Launcher#3 (squash). v3 (filtros agrupables, orden, cuadrícula virtualizada, supercarga): PR ImPixeluwu/Aerial-Launcher#6, pendiente de fusionar | `inventory/SPEC.md` |
 | Catálogo de esquemas | Hecho (solo lectura); PR ImPixeluwu/Aerial-Launcher#4 (squash) | `schematics/SPEC.md`, `schematics/NOTES.md` |
 | Visor de Homebase | Descartado por el usuario tras implementar la fase 1; rama borrada. Parche guardado para retomarlo (`homebase/SPEC.md` §10) | `homebase/SPEC.md`, `homebase/NOTES.md`, `homebase/phase1-implementation.patch` |
 | Libro de colección | Descartado: el catálogo de esquemas ya incluye el libro (filtro de origen) | `collection-book/NOTES.md` (solo referencia) |

@@ -1,6 +1,6 @@
 # SPEC — Visor de inventario de Salvar el Mundo
 
-Estado: v2 · Alcance: solo lectura (no modifica el perfil del jugador).
+Estado: v3 · Alcance: solo lectura (no modifica el perfil del jugador).
 
 Este documento describe **comportamiento**, no código. Se elaboró observando la
 interfaz del visor de inventario de GLOW Launcher 5.0.4 (análisis estático, sin
@@ -131,7 +131,8 @@ InventoryItem {
   description          // texto del juego o null
   category, subType, filterType, rarity, tier, material
   level                // attributes.level
-  maxLevel             // tier × 10 + attributes.max_level_bonus
+  maxLevel             // tier × 10 + bonus de nivel (§6.2)
+  superchargeLevel     // 0–5 (§6.2); 0 en ingredientes y materiales
   powerLevel           // PL (§6.2); solo armas y trampas
   quantity, stacks
   alterations: { id, name, tier, rarity, element }[]   // perks, en orden
@@ -183,13 +184,25 @@ Los datos solo se cargan en el proceso principal; el renderer no los incluye.
 (`C, UC, R, VR, SR, UR`), con `FirstLevel` y una lista `Ratings`:
 
 ```
-nivelEfectivo = min(level, tier × 10 + max_level_bonus)
+bonus = max(max_level_bonus, level − tier × 10)
+nivelEfectivo = min(level, tier × 10 + bonus)
 PL = floor(Ratings[nivelEfectivo − FirstLevel])
 ```
 
 Si el índice es negativo → sin PL; si supera la lista → último valor.
 Comprobado: Legendary T5 a nivel 50 → **130**, como en la captura del juego.
 Solo se calcula para armas y trampas.
+
+**Supercarga** [v3, DECISIÓN del usuario; misma regla que
+`schematics/SPEC.md` §6.2]. La supercarga sube el nivel máximo de 50 a 60
+de 2 en 2. Hay objetos supercargados que no traen `max_level_bonus` en el
+perfil (comprobado por el usuario: un arma a nivel 60 se veía "NV 60 / 50"
+con PL 130). Por eso el tope es el mayor de `tier × 10 + max_level_bonus`
+y el propio `level`: a nivel 60, "NV 60 / 60" y **PL 144** (`SR_T05` llega
+a 144 en el nivel 60) [DATOS].
+`superchargeLevel = min(floor((level − 50) / 2), 5)` si `level > 50`; si no,
+0. Implementado en `stwLevelBonus` y `stwSuperchargeLevel`
+(`src/lib/parsers/stw-items.ts`), compartidos con el catálogo de esquemas.
 
 ### 6.3 Estadísticas
 
@@ -274,21 +287,54 @@ Lo que no coincide (desconocido o fuera del objeto):
   "Operaciones STW" y opción en el menú personalizable [DECISIÓN].
 - Usa la cuenta activa de Aerial (la de la cabecera); no hay selector propio
   [DECISIÓN, igual que GLOW].
-- Filtros [CONFIRMADO]:
-  - Perfil (radio, 3 opciones). Cambiarlo recarga los datos.
-  - Categoría (multi-selección; muestra el contador por categoría).
-  - Rareza (multi-selección; solo aparecen las rarezas con algún objeto).
-  - Búsqueda de texto (sin distinguir mayúsculas) sobre `name` + `templateId`,
-    con espera de 200 ms tras teclear.
-  - "Limpiar filtros", desactivado si no hay filtros activos.
-- Contador "N objetos mostrados" [CONFIRMADO].
-- Cuadrícula de tarjetas, coloreadas por rareza, con nombre, imagen, PL, cantidad
-  abreviada (≥10 000 → `12.3k`, ≥1 000 000 → `1.2M`) y estrellas de tier
-  [CONFIRMADO para el formato de cantidad].
+- Disposición [v3, DECISIÓN del usuario; como el catálogo de esquemas]:
+  - Arriba, solo la búsqueda de texto (sin distinguir mayúsculas) sobre
+    `name` + `templateId`, con espera de 200 ms tras teclear.
+  - Debajo, en una fila: perfil (selector de 3 opciones; cambiarlo recarga
+    los datos), orden, botón de dirección y recargar.
+  - Después, una fila por filtro con su etiqueta. Cada fila se ajusta solo
+    por dentro y los contadores usan cifras de ancho fijo.
+- Filtros:
+  - **Categoría** [v3, DECISIÓN del usuario]: A distancia, Cuerpo a cuerpo,
+    Trampas y Materiales (multiselección, con contador). Al marcar una,
+    aparece una fila con sus tipos:
+
+    | Categoría | Tipos |
+    |---|---|
+    | A distancia | assault, pistol, sniper, shotgun, smg, explosive |
+    | Cuerpo a cuerpo | los seis `melee_*` |
+    | Trampas | trap_floor, trap_wall, trap_ceiling |
+    | Materiales | Ingredientes (`Ingredient:`) y Materiales de construcción (`WorldItem:`) |
+
+    Solo aparecen los tipos con objetos. Al desmarcar una categoría se
+    quitan sus tipos de la selección. En v2 había cinco categorías planas
+    (ranged, melee, traps, ingredients, materials).
+  - **Rareza** (multiselección; solo aparecen las rarezas con algún objeto)
+    [CONFIRMADO].
+  - Categoría, tipo y rareza se combinan con AND (OR dentro de cada uno).
+  - "Limpiar filtros", desactivado si no hay filtros activos; no cambia el
+    orden ni el perfil.
+- **Orden** [v3, DECISIÓN del usuario]: poder (por defecto), nivel, nombre,
+  rareza o cantidad, con un botón ascendente/descendente. Al cambiar de
+  campo, la dirección vuelve a la suya: descendente, salvo nombre. Los
+  empates van de mayor a menor y después por nombre; los objetos sin PL
+  quedan al final al ordenar por poder. Lógica compartida con el catálogo
+  de esquemas (`src/lib/parsers/item-sort.ts`).
+- Contador "N objetos mostrados" y "Limpiar filtros" en la misma línea
+  [CONFIRMADO para el contador].
+- Cuadrícula de tarjetas virtualizada (§12), coloreadas por rareza, con
+  nombre, imagen, PL, cantidad abreviada (≥10 000 → `12.3k`, ≥1 000 000 →
+  `1.2M`) y cinco estrellas: las primeras `tier` encendidas y las primeras
+  `superchargeLevel` en azul, como en el catálogo de esquemas [v3;
+  CONFIRMADO para el formato de cantidad]. Ingredientes y materiales no
+  llevan estrellas.
+- Botón "Ir hasta arriba" cuando la barra de búsqueda sale de la vista, como
+  en otras páginas de Aerial [DECISIÓN del usuario].
 - Al pulsar una tarjeta, ficha de detalle al estilo del juego [DECISIÓN]:
   cabecera con rareza | categoría | subtipo, nombre, PL, estrellas y
   "NV x / máx"; estadísticas al nivel del objeto (§6.3); perks (§6.4); descripción;
-  cantidad, stacks, material y `templateId`. Los atributos en bruto del perfil
+  cantidad, stacks, supercarga (si la hay), material y `templateId`. Los
+  atributos en bruto del perfil
   no se muestran.
 - Flechas anterior/siguiente en la ficha (y teclas ← →) para recorrer los
   objetos de la lista filtrada, con la posición "N / total" [DECISIÓN]. Escape o clic fuera la cierra
@@ -332,12 +378,18 @@ Lo que no coincide (desconocido o fuera del objeto):
 6. Un `templateId` que no está en los datos → nombre derivado e icono genérico.
 7. `Ammo:ammodatashells` → no aparece.
 8. Dos armas iguales con distinto `level` → dos objetos.
-9. PL: nivel por encima del máximo se limita a `tier × 10`, salvo
-   `max_level_bonus`.
+9. Supercarga: `Weapon:wid_edged_sword_medium_laser_sr_crystal_t05` a nivel
+   60 sin `max_level_bonus` → NV 60/60, PL **144**, `superchargeLevel` 5.
+   (Hasta v2, el nivel se limitaba a `tier × 10` y daba PL 130.)
 10. Perks: `aid_att_critchance_t05` → tier 5, dorado; `aid_ele_energy_t03` →
     tier 3, azul, elemento Energía.
 11. Perks en `alterationDefinitions` se leen si falta `alterations`.
 12. Las cinco plantillas ocultas no aparecen.
+13. Filtro: la categoría Materiales incluye ingredientes y materiales de
+    construcción; dentro de ella, el tipo "Materiales de construcción" deja
+    solo los `WorldItem:`. Categoría + rareza + búsqueda se combinan con AND.
+14. Orden por cantidad: de mayor a menor por defecto; en empate, la rareza
+    mayor y después el nombre.
 
 ## 11. Implementación en Aerial
 
@@ -347,49 +399,33 @@ Lo que no coincide (desconocido o fuera del objeto):
 | Clasificación y agrupación (§3–§4, puro) | `src/lib/parsers/inventory.ts` |
 | Datos del juego y PL (§6) | `src/lib/parsers/stw-items.ts`, `src/data/stw/`, `scripts/generate-stw-data.mjs` |
 | Constantes compartidas con la página | `src/config/constants/inventory.ts` |
-| Pruebas de §10 | `src/lib/parsers/inventory.test.ts` (`npm test`) |
+| Filtros por categoría y tipo (§7, puro, sin datos del juego) | `src/lib/parsers/inventory-list.ts` |
+| Orden (compartido con esquemas) | `src/lib/parsers/item-sort.ts` |
+| Pruebas de §10 | `src/lib/parsers/inventory.test.ts`, `inventory-list.test.ts`, `item-sort.test.ts` (`npm test`) |
 | Proceso principal | `src/kernel/core/inventory.ts`, `ipcMain.handle('inventory:get-overview')` en `src/kernel/main.ts` |
 | Puente al renderer | `src/kernel/preload-actions/inventory.ts` → `window.electronAPI.getInventoryOverview` |
 | Página | `src/routes/stw-operations/inventory/` |
+| Cuadrícula virtual, filtros, estrellas y ficha (compartidos con esquemas) | `src/components/stw-items/` |
 | Menú | barra lateral, menú personalizable (`inventory`), `routeTree.gen.ts` |
 | Textos | `src/locales/{en-US,es-419}/stw-operations/inventory.json`; el resto de idiomas cae a inglés |
 
 La cuenta mostrada es la cuenta activa de Aerial (la de la cabecera), igual
 que en GLOW; al cambiarla se reinician los filtros y se recargan los datos.
 
-## 12. Pendiente: virtualizar la cuadrícula
+## 12. Cuadrícula virtualizada
 
-[DECISIÓN del usuario] Queda pendiente, pero está considerado. No se hizo
-junto al catálogo de esquemas para no cambiar el inventario en ese PR.
+[v3, DECISIÓN del usuario] Hecho en ImPixeluwu/Aerial-Launcher#6 (antes
+quedó pendiente al hacer el catálogo de esquemas).
 
-**Motivo.** La cuadrícula del inventario pinta todas las tarjetas a la vez,
-como hacía el catálogo de esquemas antes de virtualizarlo. Con 2.000
-esquemas, el catálogo tenía 2.002 tarjetas en el DOM y cada clic en un
-filtro bloqueaba la ventana entre 0,6 y 2,8 s; con la virtualización bajó a
-20–50 tarjetas y ~30–50 ms (`schematics/SPEC.md` §7). En mochilas normales
-no se nota, pero el almacén (`outpost0`) o cuentas con muchos objetos
-pueden acercarse a esos números.
-
-**Cómo hacerlo.** Reutilizar el patrón de `SchematicGrid`
-(`src/routes/stw-operations/schematics/route.tsx`):
-
-- `@tanstack/react-virtual` (ya es dependencia, fijada en 3.14.13).
-- El scroll es el viewport del layout (`.main-wrapper-content`); el
-  `scrollMargin` es el `offsetTop` de la cuadrícula, medido en cada render.
-- Columnas calculadas con un `ResizeObserver`: `floor((ancho + 12) / (120 +
-  12))`, equivalente al `auto-fill` de 7,5 rem actual.
-- Altura fija de tarjeta, necesaria para que todas las filas midan igual.
-  Hoy las tarjetas del inventario no la tienen: la altura varía si no hay
-  PL o estrellas (ingredientes y materiales).
-- Tarjeta con `memo` y `onSelect(itemKey)` estable.
-- `useDeferredValue` sobre la lista filtrada en `-hooks.ts`, para que los
-  botones respondan antes de repintar.
-- Volver al principio de la cuadrícula al cambiar filtros o perfil, y
-  `scrollToIndex` al recorrer la ficha con ← →.
-- Antes, extraer la cuadrícula a `src/components/stw-items/` como
-  componente genérico (recibe los objetos y una función que pinta la
-  tarjeta), para que la usen las dos páginas.
-
-**Verificación prevista.** La misma que en el catálogo: preview con miles de
-objetos generados, contar tarjetas en el DOM y medir el tiempo de un clic en
-un filtro antes y después, más capturas a 800×600.
+- Componente común `VirtualItemGrid`
+  (`src/components/stw-items/virtual-item-grid.tsx`), que también usa el
+  catálogo de esquemas, sobre `@tanstack/react-virtual`.
+- El scroll es el viewport del layout (`.main-wrapper-content`); las
+  columnas salen del ancho (mínimo 7,5 rem) y las tarjetas tienen altura
+  fija (136 px en el inventario).
+- Tarjetas con `memo`; la lista filtrada se pinta en diferido
+  (`useDeferredValue`) para que los botones respondan al momento.
+- Al cambiar filtros, orden o perfil se vuelve al principio de la lista, y
+  al recorrer la ficha con ← → la lista sigue al objeto abierto.
+- Medido en el preview con 2.000 objetos a 800×600: ~24 tarjetas en el DOM
+  y ~20–30 ms por clic en un filtro, frente a pintar las 2.000.
