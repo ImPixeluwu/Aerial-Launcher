@@ -365,6 +365,21 @@ describe('calculateStwPowerLevel', () => {
     ).toBe(130)
   })
 
+  it('raises the level cap and PL of supercharged items', () => {
+    const [weapon] = parse({
+      a: item('Weapon:wid_edged_sword_medium_laser_sr_crystal_t05', 1, {
+        level: 60,
+      }),
+    }).items
+
+    expect(weapon).toMatchObject({
+      level: 60,
+      maxLevel: 60,
+      powerLevel: 144,
+      superchargeLevel: 5,
+    })
+  })
+
   it('caps the level at the tier maximum plus bonus levels', () => {
     const capped = calculateStwPowerLevel({
       level: 60,

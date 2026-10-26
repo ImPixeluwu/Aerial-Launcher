@@ -376,6 +376,34 @@ export function stwMaxLevel(tier: number, maxLevelBonus = 0) {
 }
 
 /**
+ * Each supercharge raises the level cap by 2, from 50 up to 60.
+ */
+export function stwSuperchargeLevel(level: number | null) {
+  return level !== null && level > 50
+    ? Math.min(Math.floor((level - 50) / 2), 5)
+    : 0
+}
+
+/**
+ * Levels past the tier cap. Supercharged items go past level 50; if the
+ * profile does not say so with max_level_bonus, trust the item level
+ * instead of capping it.
+ */
+export function stwLevelBonus({
+  level,
+  maxLevelBonus = 0,
+  tier,
+}: {
+  level: number | null
+  maxLevelBonus?: number
+  tier: number | null
+}) {
+  return tier && level !== null
+    ? Math.max(maxLevelBonus, level - stwMaxLevel(tier))
+    : maxLevelBonus
+}
+
+/**
  * Item power level (PL) from the game's item rating table, keyed by
  * rarity and tier, indexed by level.
  */

@@ -13,6 +13,45 @@
     "ingredients": "Ingredients",
     "materials": "Materials"
   },
+  "filter": {
+    "category": "Category",
+    "rarity": "Rarity"
+  },
+  "group": {
+    "ranged": "Ranged",
+    "melee": "Melee",
+    "traps": "Traps",
+    "materials": "Materials"
+  },
+  "type": {
+    "assault": "Assault",
+    "pistol": "Pistol",
+    "sniper": "Sniper",
+    "shotgun": "Shotgun",
+    "smg": "SMG",
+    "explosive": "Explosive",
+    "melee_sword": "Sword",
+    "melee_axe": "Axe",
+    "melee_scythe": "Scythe",
+    "melee_spear": "Spear",
+    "melee_hammer": "Hardware",
+    "melee_bat": "Club",
+    "trap_floor": "Floor trap",
+    "trap_wall": "Wall trap",
+    "trap_ceiling": "Ceiling trap",
+    "ingredients": "Ingredients",
+    "building-mats": "Building mats"
+  },
+  "sort": {
+    "label": "Sort by",
+    "power": "Power",
+    "level": "Level",
+    "name": "Name",
+    "rarity": "Rarity",
+    "quantity": "Quantity",
+    "asc": "Ascending",
+    "desc": "Descending"
+  },
   "rarity": {
     "c": "Common",
     "uc": "Uncommon",
@@ -42,9 +81,12 @@
     "level": "Level",
     "tier": "Tier",
     "material": "Material",
-    "template": "Template ID"
+    "template": "Template ID",
+    "supercharge": "Supercharge"
   },
   "level-of": "LV {{level}} / {{max}}",
+  "supercharged_one": "{{count}} supercharge",
+  "supercharged_other": "{{count}} supercharges",
   "stat": {
     "damage": "Damage",
     "impact": "Impact",

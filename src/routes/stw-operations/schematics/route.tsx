@@ -1,17 +1,14 @@
-import type { ReactNode } from 'react'
 import type { SchematicItem } from '../../../types/schematics'
 
-import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { memo } from 'react'
 
 import { createRoute } from '@tanstack/react-router'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { UpdateIcon } from '@radix-ui/react-icons'
 import {
   ArrowDownWideNarrow,
   ArrowUpNarrowWide,
   BookOpen,
   Search,
-  Star,
   X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -29,6 +26,11 @@ import {
 import { Route as RootRoute } from '../../__root'
 
 import { GoToTop } from '../../../components/go-to-top'
+import {
+  FilterCount,
+  FilterLabel,
+} from '../../../components/stw-items/filter-parts'
+import { VirtualItemGrid } from '../../../components/stw-items/virtual-item-grid'
 import { HomeBreadcrumb } from '../../../components/navigations/breadcrumb/home'
 import {
   ItemDetailDialog,
@@ -36,6 +38,7 @@ import {
 } from '../../../components/stw-items/item-detail-dialog'
 import {
   ItemImage,
+  ItemStars,
   PowerBadge,
   formatQuantity,
   rarityStyle,
@@ -348,11 +351,18 @@ function Content() {
           <p>{t('schematics.no-matches')}</p>
         </div>
       ) : (
-        <SchematicGrid
+        <VirtualItemGrid
+          cardHeight={cardHeight}
           items={filteredItems}
           isStale={isLoading || isFiltering}
           selectedIndex={selectedIndex}
-          onSelect={setSelectedItemKey}
+          getKey={(item) => item.itemKey}
+          renderItem={(item) => (
+            <SchematicCard
+              item={item}
+              onSelect={setSelectedItemKey}
+            />
+          )}
         />
       )}
 
@@ -373,156 +383,8 @@ function Content() {
   )
 }
 
-function FilterLabel({ children }: { children: ReactNode }) {
-  return <span className="text-sm text-muted-foreground">{children}</span>
-}
-
-function FilterCount({ value }: { value?: number }) {
-  return (
-    <span className="ml-1 tabular-nums text-muted-foreground">
-      {value ?? 0}
-    </span>
-  )
-}
-
-// Card size in px: 7.5rem wide at least, fixed height so every row of the
-// virtual grid has the same size
-const cardMinWidth = 120
+// Fixed card height: every row of the virtual grid has the same size
 const cardHeight = 156
-const gridGap = 12
-
-/**
- * Only the visible rows are rendered: accounts can have thousands of
- * schematics. The page scrolls in the main layout viewport.
- */
-function SchematicGrid({
-  isStale,
-  items,
-  selectedIndex,
-  onSelect,
-}: {
-  isStale: boolean
-  items: Array<SchematicItem>
-  selectedIndex: number
-  onSelect: (itemKey: string) => void
-}) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(0)
-  const [scrollMargin, setScrollMargin] = useState(0)
-  const [scrollElement] = useState(() =>
-    document.querySelector<HTMLElement>('.main-wrapper-content'),
-  )
-
-  const columns = Math.max(
-    1,
-    Math.floor((width + gridGap) / (cardMinWidth + gridGap)),
-  )
-  const virtualizer = useVirtualizer({
-    count: Math.ceil(items.length / columns),
-    getScrollElement: () => scrollElement,
-    estimateSize: () => cardHeight + gridGap,
-    overscan: 4,
-    scrollMargin,
-  })
-
-  useLayoutEffect(() => {
-    const container = containerRef.current
-
-    if (!container) {
-      return
-    }
-
-    const observer = new ResizeObserver(([entry]) =>
-      setWidth(entry.contentRect.width),
-    )
-
-    observer.observe(container)
-
-    return () => observer.disconnect()
-  }, [])
-
-  // The filters above the grid change height as they wrap
-  useLayoutEffect(() => {
-    const offsetTop = containerRef.current?.offsetTop ?? 0
-
-    if (offsetTop !== scrollMargin) {
-      setScrollMargin(offsetTop)
-    }
-  })
-
-  // A new filter or order starts at the top of the list
-  useEffect(() => {
-    if (scrollElement && scrollElement.scrollTop > scrollMargin) {
-      scrollElement.scrollTop = scrollMargin
-    }
-  }, [items])
-
-  // Keep the schematic open in the details in view
-  useEffect(() => {
-    if (selectedIndex >= 0) {
-      virtualizer.scrollToIndex(Math.floor(selectedIndex / columns))
-    }
-  }, [selectedIndex])
-
-  return (
-    <div
-      ref={containerRef}
-      className={cn('relative w-full transition-opacity', {
-        'opacity-60': isStale,
-      })}
-      style={{ height: virtualizer.getTotalSize() - gridGap }}
-    >
-      {virtualizer.getVirtualItems().map((row) => (
-        <div
-          key={row.key}
-          className="absolute left-0 top-0 grid w-full gap-3"
-          style={{
-            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-            height: cardHeight,
-            transform: `translateY(${row.start - scrollMargin}px)`,
-          }}
-        >
-          {items
-            .slice(row.index * columns, (row.index + 1) * columns)
-            .map((item) => (
-              <SchematicCard
-                key={item.itemKey}
-                item={item}
-                onSelect={onSelect}
-              />
-            ))}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/**
- * Five stars: the first "tier" ones are lit and the first supercharges
- * are highlighted.
- */
-function SchematicStars({ item }: { item: SchematicItem }) {
-  const tier = Math.min(Math.max(item.tier ?? 1, 1), 5)
-  const supercharged = Math.min(item.superchargeLevel, tier)
-
-  return (
-    <span className="flex gap-0.5">
-      {Array.from({ length: 5 }, (_, index) => (
-        <Star
-          key={index}
-          className={cn(
-            'size-3',
-            index < supercharged
-              ? 'fill-current text-sky-400'
-              : index < tier
-                ? 'fill-current text-yellow-400'
-                : 'text-muted-foreground/40',
-          )}
-        />
-      ))}
-    </span>
-  )
-}
 
 const SchematicCard = memo(function SchematicCard({
   item,
@@ -539,7 +401,7 @@ const SchematicCard = memo(function SchematicCard({
   return (
     <button
       type="button"
-      className="flex flex-col items-center gap-1 overflow-hidden rounded-md border-2 p-2 text-left hover:brightness-125 transition"
+      className="flex w-full flex-col items-center gap-1 overflow-hidden rounded-md border-2 p-2 text-left hover:brightness-125 transition"
       style={{ ...rarityStyle(item.rarity), height: cardHeight }}
       onClick={() => onSelect(item.itemKey)}
       title={t('schematics.view-details')}
@@ -579,7 +441,10 @@ const SchematicCard = memo(function SchematicCard({
           </span>
         )}
       </div>
-      <SchematicStars item={item} />
+      <ItemStars
+        tier={item.tier}
+        superchargeLevel={item.superchargeLevel}
+      />
       {item.level !== null && (
         <span className="text-xs text-muted-foreground">
           {item.maxLevel !== null
@@ -621,7 +486,12 @@ function SchematicDetail({
       item.subType,
     ].filter((label): label is string => Boolean(label)),
     powerLevel: item.powerLevel,
-    stars: <SchematicStars item={item} />,
+    stars: (
+      <ItemStars
+        tier={item.tier}
+        superchargeLevel={item.superchargeLevel}
+      />
+    ),
     levelText:
       item.level === null
         ? null

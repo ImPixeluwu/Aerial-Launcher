@@ -77,13 +77,33 @@ export function PowerBadge({
   )
 }
 
-export function TierStars({ tier }: { tier: number }) {
+/**
+ * Five stars: the first "tier" ones are lit and the first supercharges
+ * are highlighted.
+ */
+export function ItemStars({
+  superchargeLevel,
+  tier,
+}: {
+  superchargeLevel: number
+  tier: number | null
+}) {
+  const litStars = Math.min(Math.max(tier ?? 1, 1), 5)
+  const supercharged = Math.min(superchargeLevel, litStars)
+
   return (
-    <span className="flex gap-0.5 text-yellow-400">
-      {Array.from({ length: tier }, (_, index) => (
+    <span className="flex gap-0.5">
+      {Array.from({ length: 5 }, (_, index) => (
         <Star
           key={index}
-          className="size-3 fill-current"
+          className={cn(
+            'size-3',
+            index < supercharged
+              ? 'fill-current text-sky-400'
+              : index < litStars
+                ? 'fill-current text-yellow-400'
+                : 'text-muted-foreground/40',
+          )}
         />
       ))}
     </span>

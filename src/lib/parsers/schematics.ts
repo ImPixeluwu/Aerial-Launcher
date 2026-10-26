@@ -33,7 +33,9 @@ import {
   findStwAlteration,
   findStwItem,
   resolveStwSchematic,
+  stwLevelBonus,
   stwMaxLevel,
+  stwSuperchargeLevel,
 } from './stw-items'
 
 type ProfileItems = Record<string, MCPQueryProfileStorageItem>
@@ -60,15 +62,6 @@ export function schematicGroup(
   }
 
   return filterType?.startsWith('melee_') ? 'melee' : 'ranged'
-}
-
-/**
- * Each supercharge raises the level cap by 2, from 50 up to 60.
- */
-export function schematicSuperchargeLevel(level: number | null) {
-  return level !== null && level > 50
-    ? Math.min(Math.floor((level - 50) / 2), 5)
-    : 0
 }
 
 function tierFromLevel(level: number | null) {
@@ -149,12 +142,7 @@ function createSchematicItem(
     rarity,
     filterType,
   )
-  // Supercharged schematics go past the tier cap; if the profile does not
-  // say so with max_level_bonus, trust the level instead of capping it
-  const levelBonus =
-    tier && level !== null
-      ? Math.max(maxLevelBonus, level - stwMaxLevel(tier))
-      : maxLevelBonus
+  const levelBonus = stwLevelBonus({ level, maxLevelBonus, tier })
   const alterations = alterationIds.map(findStwAlteration)
   // Aerial ships the mythic vouchers with the "er" suffix
   const iconRarity =
@@ -176,7 +164,7 @@ function createSchematicItem(
     material: parseInventoryMaterial(id),
     level,
     maxLevel: tier ? stwMaxLevel(tier, levelBonus) : null,
-    superchargeLevel: schematicSuperchargeLevel(level),
+    superchargeLevel: stwSuperchargeLevel(level),
     powerLevel: calculateStwPowerLevel({
       level,
       maxLevelBonus: levelBonus,

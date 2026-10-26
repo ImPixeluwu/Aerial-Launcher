@@ -9,6 +9,11 @@ export type InventoryCategory =
   | 'ingredients'
   | 'materials'
 
+/**
+ * Category buttons of the inventory filter; each one lists its own types.
+ */
+export type InventoryGroup = 'ranged' | 'melee' | 'traps' | 'materials'
+
 export type InventoryFilterType =
   | 'assault'
   | 'pistol'
@@ -85,6 +90,7 @@ export type InventoryItem = {
   material: 'ore' | 'crystal' | null
   level: number | null
   maxLevel: number | null
+  superchargeLevel: number
   powerLevel: number | null
   quantity: number
   stacks: number
@@ -103,4 +109,20 @@ export type InventoryOverview = {
   items: Array<InventoryItem>
   categoryCounts: Record<InventoryCategory, number>
   rarityCounts: Partial<Record<RarityType, number>>
+}
+
+/**
+ * Types shown once a category is selected: weapon and trap types, plus
+ * ingredients and building materials inside "materials".
+ */
+export type InventoryItemType =
+  | InventoryFilterType
+  | 'ingredients'
+  | 'building-mats'
+
+export type InventoryFilters = {
+  groups: Array<InventoryGroup>
+  types: Array<InventoryItemType>
+  rarities: Array<RarityType>
+  search: string
 }
