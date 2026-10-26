@@ -1,6 +1,6 @@
 # Publishing a community release
 
-Release repository: https://github.com/FIZZCD/Aerial-Launcher
+Release repository: https://github.com/ImPixeluwu/Aerial-Launcher
 
 1. Update `package.json`, the root version in `package-lock.json`, and
    `CHANGELOG.md` with the new version and changes.

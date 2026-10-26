@@ -1,17 +1,18 @@
 {
   "name": "aerial-launcher",
   "productName": "Aerial Launcher",
-  "description": "Community fork of Aerial Launcher for Fortnite STW, maintained by Xpert420",
-  "version": "1.12.4",
+  "description": "Community fork of Aerial Launcher for Fortnite STW, maintained by Pixel",
+  "version": "1.13.0",
   "author": {
     "name": "Ciensprog"
   },
   "contributors": [
-    { "name": "Xpert420", "url": "https://github.com/FIZZCD" }
+    { "name": "Xpert420", "url": "https://github.com/FIZZCD" },
+    { "name": "Pixel", "url": "https://github.com/ImPixeluwu" }
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/FIZZCD/Aerial-Launcher"
+    "url": "https://github.com/ImPixeluwu/Aerial-Launcher"
   },
   "license": "GPL-3.0",
   "keywords": [
